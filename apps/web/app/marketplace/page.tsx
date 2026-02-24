@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useWallet } from "@/lib/wallet-context"
 import { useI18n } from "@/lib/i18n-context"
+import { useEnergyDistribution } from "@/hooks/useEnergyDistribution"
 import { Sidebar } from "@/components/sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { SuccessModal } from "@/components/success-modal"
@@ -19,7 +20,7 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Plus, Zap, ArrowLeft } from "lucide-react"
+import { Plus, Zap, ArrowLeft, Users, Activity, AlertCircle, Loader2 } from "lucide-react"
 import { mockOffers, generateIdenticon, mockUser } from "@/lib/mock-data"
 
 interface Offer {
@@ -32,9 +33,10 @@ interface Offer {
 }
 
 export default function MarketplacePage() {
-  const { isConnected } = useWallet()
+  const { isConnected, address } = useWallet()
   const { t } = useI18n()
   const router = useRouter()
+  const { getTotalGenerated, getMemberList } = useEnergyDistribution()
   const [showCreateModal, setShowCreateModal] = useState(false)
   const [showBuyModal, setShowBuyModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
@@ -48,6 +50,13 @@ export default function MarketplacePage() {
   })
   const [offers, setOffers] = useState<Offer[]>(mockOffers)
   const [userStockKwh, setUserStockKwh] = useState(mockUser.stockKwh)
+  const [contractStats, setContractStats] = useState<{
+    totalGenerated: number
+    memberCount: number
+    members: string[]
+    isLoading: boolean
+    error: string | null
+  }>({ totalGenerated: 0, memberCount: 0, members: [], isLoading: true, error: null })
 
   useEffect(() => {
     if (!isConnected) {
@@ -66,6 +75,35 @@ export default function MarketplacePage() {
       setUserStockKwh(Number.parseFloat(savedStockKwh))
     }
   }, [])
+
+  useEffect(() => {
+    if (!address) return
+
+    const fetchContractData = async () => {
+      setContractStats(prev => ({ ...prev, isLoading: true, error: null }))
+      try {
+        const [totalGenerated, members] = await Promise.all([
+          getTotalGenerated(),
+          getMemberList(),
+        ])
+        setContractStats({
+          totalGenerated,
+          memberCount: members.length,
+          members,
+          isLoading: false,
+          error: null,
+        })
+      } catch (err) {
+        setContractStats(prev => ({
+          ...prev,
+          isLoading: false,
+          error: err instanceof Error ? err.message : "Unknown error",
+        }))
+      }
+    }
+
+    fetchContractData()
+  }, [address])
 
   if (!isConnected) {
     return null
@@ -161,6 +199,45 @@ export default function MarketplacePage() {
               </Button>
             </div>
           </div>
+
+          <Card className="mb-6 md:mb-8">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Activity className="w-5 h-5 text-primary" />
+                {t("marketplace.communityStats")}
+              </CardTitle>
+              <p className="text-xs text-muted-foreground">{t("marketplace.contractData")}</p>
+            </CardHeader>
+            <CardContent>
+              {contractStats.isLoading ? (
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Loader2 className="w-4 h-4 animate-spin" />
+                  <span className="text-sm">{t("marketplace.loadingContract")}</span>
+                </div>
+              ) : contractStats.error ? (
+                <div className="flex items-center gap-2 text-destructive">
+                  <AlertCircle className="w-4 h-4" />
+                  <span className="text-sm">{t("marketplace.errorContract")}</span>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t("marketplace.totalGenerated")}</p>
+                    <p className="text-2xl font-bold text-success">
+                      {contractStats.totalGenerated.toLocaleString()} kWh
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">{t("marketplace.activeMembers")}</p>
+                    <p className="text-2xl font-bold flex items-center gap-2">
+                      <Users className="w-5 h-5 text-primary" />
+                      {contractStats.memberCount}
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
             {offers.map((offer) => {

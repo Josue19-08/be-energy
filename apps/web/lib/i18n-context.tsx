@@ -63,6 +63,12 @@ const translations = {
     "marketplace.buyModal.unitPrice": "Precio unitario:",
     "marketplace.buyModal.totalPay": "Total a pagar",
     "marketplace.buyModal.confirm": "Confirmar Compra",
+    "marketplace.communityStats": "Estadísticas de la Comunidad",
+    "marketplace.totalGenerated": "Total Generado",
+    "marketplace.activeMembers": "Miembros Activos",
+    "marketplace.contractData": "Datos en vivo de Stellar Testnet",
+    "marketplace.loadingContract": "Cargando datos del contrato...",
+    "marketplace.errorContract": "No se pudieron cargar los datos del contrato",
 
     // Wallet Confirmation Modal
     "wallet.title": "Conectar Wallet",
@@ -138,6 +144,11 @@ const translations = {
     "activity.november": "Noviembre",
     "activity.december": "Diciembre",
     "activity.noTransactions": "No hay transacciones registradas",
+    "activity.recentPayments": "Pagos Recientes",
+    "activity.recentPaymentsDescription": "Últimos pagos obtenidos desde la red Stellar (Horizon)",
+    "activity.loading": "Cargando transacciones...",
+    "activity.errorFetching": "No se pudo cargar el historial de pagos",
+    "activity.retry": "Reintentar",
 
     // Consumption Page
     "consumption.description": "Historial de consumo energético desde el inicio",
@@ -145,6 +156,8 @@ const translations = {
 
     // Common
     "common.back": "Volver",
+    "common.copyAddress": "Copiar dirección",
+    "common.copied": "Copiado",
   },
   en: {
     // Landing Page
@@ -196,6 +209,12 @@ const translations = {
     "marketplace.buyModal.unitPrice": "Unit price:",
     "marketplace.buyModal.totalPay": "Total to pay",
     "marketplace.buyModal.confirm": "Confirm Purchase",
+    "marketplace.communityStats": "Community Stats",
+    "marketplace.totalGenerated": "Total Generated",
+    "marketplace.activeMembers": "Active Members",
+    "marketplace.contractData": "Live data from Stellar Testnet",
+    "marketplace.loadingContract": "Loading contract data...",
+    "marketplace.errorContract": "Could not load contract data",
 
     // Wallet Confirmation Modal
     "wallet.title": "Connect Wallet",
@@ -271,6 +290,11 @@ const translations = {
     "activity.november": "November",
     "activity.december": "December",
     "activity.noTransactions": "No transactions recorded",
+    "activity.recentPayments": "Recent Payments",
+    "activity.recentPaymentsDescription": "Latest payments fetched from the Stellar network (Horizon)",
+    "activity.loading": "Loading transactions...",
+    "activity.errorFetching": "Could not load payment history",
+    "activity.retry": "Retry",
 
     // Consumption Page
     "consumption.description": "Energy consumption history from the beginning",
@@ -278,6 +302,8 @@ const translations = {
 
     // Common
     "common.back": "Back",
+    "common.copyAddress": "Copy Address",
+    "common.copied": "Copied",
   },
 }
 

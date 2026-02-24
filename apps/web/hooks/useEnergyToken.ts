@@ -27,28 +27,37 @@ export function useEnergyToken() {
         throw new Error("Energy token contract not configured")
       }
 
-      const server = new StellarSdk.SorobanRpc.Server(STELLAR_CONFIG.RPC_URL)
+      const server = new StellarSdk.rpc.Server(STELLAR_CONFIG.RPC_URL)
 
       // Build the contract call to get balance
       const contract = new StellarSdk.Contract(CONTRACTS.ENERGY_TOKEN)
-      const account = await server.getAccount(targetAddress)
+      let account
+      try {
+        account = await server.getAccount(targetAddress)
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err)
+
+
+        if (msg.toLowerCase().includes("account not found")) {
+          return "0.00"
+        }
+
+        throw err
+      }
 
       const transaction = new StellarSdk.TransactionBuilder(account, {
         fee: StellarSdk.BASE_FEE,
         networkPassphrase: NETWORK_PASSPHRASE,
       })
         .addOperation(
-          contract.call(
-            "balance",
-            StellarSdk.nativeToScVal(targetAddress, { type: "address" })
-          )
+          contract.call("balance", StellarSdk.nativeToScVal(targetAddress, { type: "address" }))
         )
         .setTimeout(30)
         .build()
 
       const simulatedResult = await server.simulateTransaction(transaction)
 
-      if (StellarSdk.SorobanRpc.Api.isSimulationSuccess(simulatedResult)) {
+      if (StellarSdk.rpc.Api.isSimulationSuccess(simulatedResult)) {
         const balance = StellarSdk.scValToNative(simulatedResult.result!.retval)
         // Convert from 7 decimals to readable format
         return (Number(balance) / 10000000).toFixed(2)
@@ -84,7 +93,7 @@ export function useEnergyToken() {
       // Convert amount to contract format (7 decimals)
       const amountInStroops = Math.floor(amount * 10000000)
 
-      const server = new StellarSdk.SorobanRpc.Server(STELLAR_CONFIG.RPC_URL)
+      const server = new StellarSdk.rpc.Server(STELLAR_CONFIG.RPC_URL)
       const contract = new StellarSdk.Contract(CONTRACTS.ENERGY_TOKEN)
       const account = await server.getAccount(address)
 
@@ -119,7 +128,7 @@ export function useEnergyToken() {
         let getResponse = await server.getTransaction(result.hash)
 
         while (getResponse.status === "NOT_FOUND") {
-          await new Promise(resolve => setTimeout(resolve, 1000))
+          await new Promise((resolve) => setTimeout(resolve, 1000))
           getResponse = await server.getTransaction(result.hash)
         }
 
@@ -140,9 +149,56 @@ export function useEnergyToken() {
   }
 
   /**
-   * Burn $ENERGY tokens (when consuming energy)
+   * Check if an address holds the on-chain `minter` role.
+   * Read-only simulation — no signature or fee required.
    */
-  const burnEnergy = async (amount: number): Promise<string> => {
+  const checkIsMinter = async (accountAddress: string): Promise<boolean> => {
+    try {
+      if (!CONTRACTS.ENERGY_TOKEN) {
+        throw new Error("Energy token contract not configured")
+      }
+
+      const sourceAddress = accountAddress || address
+      if (!sourceAddress) {
+        throw new Error("No address provided to check")
+      }
+
+      const server = new StellarSdk.rpc.Server(STELLAR_CONFIG.RPC_URL)
+      const contract = new StellarSdk.Contract(CONTRACTS.ENERGY_TOKEN)
+      const account = await server.getAccount(sourceAddress)
+
+      const transaction = new StellarSdk.TransactionBuilder(account, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: NETWORK_PASSPHRASE,
+      })
+        .addOperation(
+          contract.call(
+            "is_minter",
+            StellarSdk.nativeToScVal(accountAddress, { type: "address" })
+          )
+        )
+        .setTimeout(30)
+        .build()
+
+      const simulatedResult = await server.simulateTransaction(transaction)
+
+      if (StellarSdk.rpc.Api.isSimulationSuccess(simulatedResult)) {
+        return StellarSdk.scValToNative(simulatedResult.result!.retval) as boolean
+      }
+
+      return false
+    } catch (err) {
+      console.error("Error checking minter role:", err)
+      return false
+    }
+  }
+
+  /**
+   * Mint HDROP tokens to a recipient (minter role required).
+   * Calls `mint_energy(to, amount, minter)` on the energy token contract.
+   * The connected wallet is used as the `minter` argument and must sign.
+   */
+  const mintEnergy = async (to: string, amount: number): Promise<string> => {
     try {
       setIsLoading(true)
       setError(null)
@@ -155,9 +211,11 @@ export function useEnergyToken() {
         throw new Error("Energy token contract not configured")
       }
 
-      const amountInStroops = Math.floor(amount * 10000000)
+      // BigInt prevents floating-point precision loss before i128 encoding.
+      // e.g. 1.3 kWh → Math.round(1.3 * 1e7) = 13000000 → BigInt(13000000)
+      const amountInStroops = BigInt(Math.round(amount * 1e7))
 
-      const server = new StellarSdk.SorobanRpc.Server(STELLAR_CONFIG.RPC_URL)
+      const server = new StellarSdk.rpc.Server(STELLAR_CONFIG.RPC_URL)
       const contract = new StellarSdk.Contract(CONTRACTS.ENERGY_TOKEN)
       const account = await server.getAccount(address)
 
@@ -167,9 +225,10 @@ export function useEnergyToken() {
       })
         .addOperation(
           contract.call(
-            "burn_energy",
-            StellarSdk.nativeToScVal(address, { type: "address" }),
-            StellarSdk.nativeToScVal(amountInStroops, { type: "i128" })
+            "mint_energy",
+            StellarSdk.nativeToScVal(to, { type: "address" }),
+            StellarSdk.nativeToScVal(amountInStroops, { type: "i128" }),
+            StellarSdk.nativeToScVal(address, { type: "address" }) // minter = connected wallet
           )
         )
         .setTimeout(30)
@@ -201,6 +260,75 @@ export function useEnergyToken() {
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Unknown error"
       setError(errorMessage)
+      console.error("Error minting tokens:", err)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  /**
+   * Burn $ENERGY tokens (when consuming energy)
+   */
+  const burnEnergy = async (amount: number): Promise<string> => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      if (!address || !kit) {
+        throw new Error("No wallet connected")
+      }
+
+      if (!CONTRACTS.ENERGY_TOKEN) {
+        throw new Error("Energy token contract not configured")
+      }
+
+      const amountInStroops = Math.floor(amount * 10000000)
+
+      const server = new StellarSdk.rpc.Server(STELLAR_CONFIG.RPC_URL)
+      const contract = new StellarSdk.Contract(CONTRACTS.ENERGY_TOKEN)
+      const account = await server.getAccount(address)
+
+      const transaction = new StellarSdk.TransactionBuilder(account, {
+        fee: "100000",
+        networkPassphrase: NETWORK_PASSPHRASE,
+      })
+        .addOperation(
+          contract.call(
+            "burn_energy",
+            StellarSdk.nativeToScVal(address, { type: "address" }),
+            StellarSdk.nativeToScVal(amountInStroops, { type: "i128" })
+          )
+        )
+        .setTimeout(30)
+        .build()
+
+      const preparedTx = await server.prepareTransaction(transaction)
+      const { signedTxXdr } = await kit.signTransaction(preparedTx.toXDR())
+      const signedTransaction = StellarSdk.TransactionBuilder.fromXDR(
+        signedTxXdr,
+        NETWORK_PASSPHRASE
+      )
+
+      const result = await server.sendTransaction(signedTransaction as StellarSdk.Transaction)
+
+      if (result.status === "PENDING") {
+        let getResponse = await server.getTransaction(result.hash)
+
+        while (getResponse.status === "NOT_FOUND") {
+          await new Promise((resolve) => setTimeout(resolve, 1000))
+          getResponse = await server.getTransaction(result.hash)
+        }
+
+        if (getResponse.status === "SUCCESS") {
+          return result.hash
+        }
+      }
+
+      throw new Error("Transaction failed")
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+      setError(errorMessage)
       console.error("Error burning tokens:", err)
       throw err
     } finally {
@@ -212,6 +340,8 @@ export function useEnergyToken() {
     getBalance,
     transfer,
     burnEnergy,
+    checkIsMinter,
+    mintEnergy,
     isLoading,
     error,
   }

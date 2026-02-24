@@ -1,29 +1,31 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useWallet } from "@/lib/wallet-context"
 import { useI18n } from "@/lib/i18n-context"
+import { useHorizonPayments } from "@/hooks/useHorizonPayments"
 import { Sidebar } from "@/components/sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, Send } from "lucide-react"
+import { ArrowLeft, Send, Loader2, AlertCircle } from "lucide-react"
 
-interface Transaction {
-  id: string
-  type: "compra" | "venta"
-  description: string
-  amount: string
-  time: string
-  date: Date
+function formatDate(isoString: string): string {
+  const date = new Date(isoString)
+  return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" })
+}
+
+function formatTime(isoString: string): string {
+  const date = new Date(isoString)
+  return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
 }
 
 export default function SalesPage() {
-  const { isConnected } = useWallet()
+  const { isConnected, address } = useWallet()
   const { t } = useI18n()
   const router = useRouter()
-  const [sales, setSales] = useState<Transaction[]>([])
+  const { payments, isLoading, error, refetch } = useHorizonPayments(address)
 
   useEffect(() => {
     if (!isConnected) {
@@ -31,28 +33,19 @@ export default function SalesPage() {
     }
   }, [isConnected, router])
 
-  useEffect(() => {
-    const savedHistory = localStorage.getItem("transactionHistory")
-    if (savedHistory) {
-      const parsed = JSON.parse(savedHistory)
-      const twoMonthsAgo = new Date()
-      twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
-
-      const filtered = parsed
-        .map((tx: any) => ({
-          ...tx,
-          date: new Date(tx.time),
-        }))
-        .filter((tx: Transaction) => tx.type === "venta" && tx.date >= twoMonthsAgo)
-        .sort((a: Transaction, b: Transaction) => b.date.getTime() - a.date.getTime())
-
-      setSales(filtered)
-    }
-  }, [])
-
   if (!isConnected) {
     return null
   }
+
+  const twoMonthsAgo = new Date()
+  twoMonthsAgo.setMonth(twoMonthsAgo.getMonth() - 2)
+
+  // Outgoing payments from this address within the last 2 months
+  const sales = payments.filter((p) => {
+    const isOutgoing = p.from === address && p.to !== address
+    const withinRange = new Date(p.created_at) >= twoMonthsAgo
+    return isOutgoing && withinRange
+  })
 
   return (
     <div className="min-h-screen bg-background">
@@ -80,27 +73,57 @@ export default function SalesPage() {
               </div>
             </CardHeader>
             <CardContent>
-              <div className="space-y-3">
-                {sales.length > 0 ? (
-                  sales.map((tx) => (
-                    <div
-                      key={tx.id}
-                      className="flex items-center gap-3 p-4 rounded-lg hover:bg-muted transition-colors border border-border"
-                    >
-                      <div className="flex-shrink-0">
-                        <Send className="w-5 h-5 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="font-medium truncate text-sm md:text-base">{tx.description}</p>
-                        <p className="text-xs md:text-sm text-muted-foreground">{tx.time}</p>
-                      </div>
-                      <div className="flex-shrink-0 font-semibold text-sm md:text-base text-primary">{tx.amount}</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className="text-center py-8 text-muted-foreground">{t("activity.noSales")}</div>
-                )}
-              </div>
+              {isLoading ? (
+                <div className="flex items-center justify-center py-8 text-muted-foreground">
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  {t("activity.loading")}
+                </div>
+              ) : error ? (
+                <div className="flex flex-col items-center gap-3 py-8 text-muted-foreground">
+                  <div className="flex items-center gap-2 text-destructive">
+                    <AlertCircle className="w-5 h-5" />
+                    <span>{t("activity.errorFetching")}</span>
+                  </div>
+                  <Button variant="outline" size="sm" onClick={refetch}>
+                    {t("activity.retry")}
+                  </Button>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {sales.length > 0 ? (
+                    sales.map((payment) => {
+                      const assetLabel =
+                        payment.asset_type === "native"
+                          ? "XLM"
+                          : payment.asset_code ?? payment.asset_type
+
+                      return (
+                        <div
+                          key={payment.id}
+                          className="flex items-center gap-3 p-4 rounded-lg hover:bg-muted transition-colors border border-border"
+                        >
+                          <div className="flex-shrink-0">
+                            <Send className="w-5 h-5 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium truncate text-sm md:text-base capitalize">
+                              {payment.type.replace(/_/g, " ")}
+                            </p>
+                            <p className="text-xs md:text-sm text-muted-foreground">
+                              {formatDate(payment.created_at)} · {formatTime(payment.created_at)}
+                            </p>
+                          </div>
+                          <div className="flex-shrink-0 font-semibold text-sm md:text-base text-primary">
+                            -{payment.amount ?? payment.source_amount ?? "–"} {assetLabel}
+                          </div>
+                        </div>
+                      )
+                    })
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">{t("activity.noSales")}</div>
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>

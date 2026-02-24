@@ -85,7 +85,8 @@ export async function checkHealth(): Promise<boolean> {
 export async function getFactoryAddress(): Promise<string> {
   try {
     const sdk = getSDK();
-    return await sdk.getFactoryAddress(NETWORK);
+    const response = await sdk.getFactoryAddress(NETWORK);
+    return response.address;
   } catch (error) {
     console.error('Error al obtener dirección del factory:', error);
     throw error;
@@ -99,13 +100,15 @@ export async function getVaultInfo(vaultAddress: string): Promise<VaultInfo> {
   try {
     const sdk = getSDK();
     const info = await sdk.getVaultInfo(vaultAddress, NETWORK);
+    const apyResponse = await sdk.getVaultAPY(vaultAddress, NETWORK);
+    const totalAssets = info.totalManagedFunds?.reduce((sum: number, f: { amount?: number }) => sum + (f.amount ?? 0), 0) ?? 0;
 
     return {
       address: vaultAddress,
       name: info.name || 'Unknown Vault',
       symbol: info.symbol || 'VAULT',
-      totalAssets: info.totalAssets || 0,
-      apy: info.apy || 0,
+      totalAssets,
+      apy: apyResponse.apy,
     };
   } catch (error) {
     console.error('Error al obtener información del vault:', error);
@@ -119,8 +122,8 @@ export async function getVaultInfo(vaultAddress: string): Promise<VaultInfo> {
 export async function getVaultAPY(vaultAddress: string): Promise<number> {
   try {
     const sdk = getSDK();
-    const apy = await sdk.getVaultAPY(vaultAddress, NETWORK);
-    return apy;
+    const response = await sdk.getVaultAPY(vaultAddress, NETWORK);
+    return response.apy;
   } catch (error) {
     console.error('Error al obtener APY del vault:', error);
     throw error;
@@ -137,12 +140,13 @@ export async function getUserVaultBalance(
   try {
     const sdk = getSDK();
     const balance = await sdk.getVaultBalance(vaultAddress, userAddress, NETWORK);
-    const apy = await sdk.getVaultAPY(vaultAddress, NETWORK);
+    const apyResponse = await sdk.getVaultAPY(vaultAddress, NETWORK);
+    const underlyingTotal = balance.underlyingBalance?.reduce((sum: number, v: number) => sum + v, 0) ?? 0;
 
     return {
-      shares: balance.shares || 0,
-      assets: balance.assets || 0,
-      apy,
+      shares: balance.dfTokens ?? 0,
+      assets: underlyingTotal,
+      apy: apyResponse.apy,
     };
   } catch (error) {
     console.error('Error al obtener balance del usuario:', error);
@@ -159,7 +163,7 @@ export async function generateDepositTransaction(params: DepositParams): Promise
     const sdk = getSDK();
     const { vaultAddress, amount, userAddress, invest = true, slippageBps = 100 } = params;
 
-    const transaction = await sdk.depositToVault(
+    const response = await sdk.depositToVault(
       vaultAddress,
       {
         amounts: [amount],
@@ -170,7 +174,7 @@ export async function generateDepositTransaction(params: DepositParams): Promise
       NETWORK
     );
 
-    return transaction;
+    return response.xdr;
   } catch (error) {
     console.error('Error al generar transacción de depósito:', error);
     throw error;
@@ -186,16 +190,16 @@ export async function generateWithdrawTransaction(params: WithdrawParams): Promi
     const sdk = getSDK();
     const { vaultAddress, amount, userAddress } = params;
 
-    const transaction = await sdk.withdrawFromVault(
+    const response = await sdk.withdrawFromVault(
       vaultAddress,
       {
-        amount,
+        amounts: [amount],
         caller: userAddress,
       },
       NETWORK
     );
 
-    return transaction;
+    return response.xdr;
   } catch (error) {
     console.error('Error al generar transacción de retiro:', error);
     throw error;

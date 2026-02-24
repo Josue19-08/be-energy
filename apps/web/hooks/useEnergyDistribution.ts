@@ -27,7 +27,7 @@ export function useEnergyDistribution() {
         throw new Error("Energy distribution contract not configured")
       }
 
-      const server = new StellarSdk.SorobanRpc.Server(STELLAR_CONFIG.RPC_URL)
+      const server = new StellarSdk.rpc.Server(STELLAR_CONFIG.RPC_URL)
       const contract = new StellarSdk.Contract(CONTRACTS.ENERGY_DISTRIBUTION)
       const account = await server.getAccount(targetAddress)
 
@@ -47,7 +47,7 @@ export function useEnergyDistribution() {
 
       const percentResult = await server.simulateTransaction(percentTx)
 
-      if (StellarSdk.SorobanRpc.Api.isSimulationSuccess(percentResult)) {
+      if (StellarSdk.rpc.Api.isSimulationSuccess(percentResult)) {
         const percent = StellarSdk.scValToNative(percentResult.result!.retval)
         return {
           isMember: percent !== null,
@@ -82,7 +82,7 @@ export function useEnergyDistribution() {
         throw new Error("No wallet connected")
       }
 
-      const server = new StellarSdk.SorobanRpc.Server(STELLAR_CONFIG.RPC_URL)
+      const server = new StellarSdk.rpc.Server(STELLAR_CONFIG.RPC_URL)
       const contract = new StellarSdk.Contract(CONTRACTS.ENERGY_DISTRIBUTION)
       const account = await server.getAccount(address)
 
@@ -96,7 +96,7 @@ export function useEnergyDistribution() {
 
       const simulatedResult = await server.simulateTransaction(transaction)
 
-      if (StellarSdk.SorobanRpc.Api.isSimulationSuccess(simulatedResult)) {
+      if (StellarSdk.rpc.Api.isSimulationSuccess(simulatedResult)) {
         const total = StellarSdk.scValToNative(simulatedResult.result!.retval)
         // Convert from 7 decimals to readable format
         return Number(total) / 10000000
@@ -107,6 +107,52 @@ export function useEnergyDistribution() {
       const errorMessage = err instanceof Error ? err.message : "Unknown error"
       setError(errorMessage)
       console.error("Error getting total generated:", err)
+      throw err
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  /**
+   * Get list of community members
+   */
+  const getMemberList = async (): Promise<string[]> => {
+    try {
+      setIsLoading(true)
+      setError(null)
+
+      if (!CONTRACTS.ENERGY_DISTRIBUTION) {
+        throw new Error("Energy distribution contract not configured")
+      }
+
+      if (!address) {
+        throw new Error("No wallet connected")
+      }
+
+      const server = new StellarSdk.rpc.Server(STELLAR_CONFIG.RPC_URL)
+      const contract = new StellarSdk.Contract(CONTRACTS.ENERGY_DISTRIBUTION)
+      const account = await server.getAccount(address)
+
+      const transaction = new StellarSdk.TransactionBuilder(account, {
+        fee: StellarSdk.BASE_FEE,
+        networkPassphrase: NETWORK_PASSPHRASE,
+      })
+        .addOperation(contract.call("get_member_list"))
+        .setTimeout(30)
+        .build()
+
+      const simulatedResult = await server.simulateTransaction(transaction)
+
+      if (StellarSdk.rpc.Api.isSimulationSuccess(simulatedResult)) {
+        const members = StellarSdk.scValToNative(simulatedResult.result!.retval)
+        return members as string[]
+      }
+
+      throw new Error("Failed to get member list")
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+      setError(errorMessage)
+      console.error("Error getting member list:", err)
       throw err
     } finally {
       setIsLoading(false)
@@ -132,7 +178,7 @@ export function useEnergyDistribution() {
       // Convert kWh to contract format (7 decimals)
       const kwhInStroops = Math.floor(kwhGenerated * 10000000)
 
-      const server = new StellarSdk.SorobanRpc.Server(STELLAR_CONFIG.RPC_URL)
+      const server = new StellarSdk.rpc.Server(STELLAR_CONFIG.RPC_URL)
       const contract = new StellarSdk.Contract(CONTRACTS.ENERGY_DISTRIBUTION)
       const account = await server.getAccount(address)
 
@@ -184,6 +230,7 @@ export function useEnergyDistribution() {
 
   return {
     getMemberInfo,
+    getMemberList,
     getTotalGenerated,
     recordGeneration,
     isLoading,

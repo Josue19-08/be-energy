@@ -11,14 +11,27 @@ import storage from "./storage";
 import { networkPassphrase, stellarNetwork, getHorizonHost } from "./stellar-config";
 
 // Initialize Stellar Wallets Kit
-const kit: StellarWalletsKit = new StellarWalletsKit({
-  network: networkPassphrase as WalletNetwork,
-  modules: sep43Modules(),
-});
+let kitInstance: StellarWalletsKit | null = null;
+
+function getKit(): StellarWalletsKit {
+  if (typeof window === "undefined") {
+    throw new Error("StellarWalletsKit can only be initialized in the browser");
+  }
+
+  if (!kitInstance) {
+    kitInstance = new StellarWalletsKit({
+      network: networkPassphrase as WalletNetwork,
+      modules: sep43Modules(),
+    });
+  }
+
+  return kitInstance;
+}
 
 export type MappedBalances = Record<string, Horizon.HorizonApi.BalanceLine>;
 
 export const connectWallet = async (): Promise<void> => {
+  const kit = getKit();
   await kit.openModal({
     modalTitle: "Conectar Wallet",
     onWalletSelected: (option: ISupportedWallet) => {
@@ -51,6 +64,7 @@ export const connectWallet = async (): Promise<void> => {
 };
 
 export const disconnectWallet = async (): Promise<void> => {
+  const kit = getKit();
   await kit.disconnect();
   storage.removeItem("walletId");
   storage.removeItem("walletAddress");
@@ -88,4 +102,4 @@ export const fetchBalances = async (address: string): Promise<MappedBalances> =>
   }
 };
 
-export const wallet = kit;
+export const wallet = () => getKit();

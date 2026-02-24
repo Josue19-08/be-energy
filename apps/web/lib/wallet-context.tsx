@@ -32,8 +32,8 @@ interface WalletContextType {
   isFreighterInstalled: boolean
   isPending: boolean
   network: string | null
-  kit: StellarWalletsKit
-  signTransaction: typeof wallet.signTransaction
+  kit: StellarWalletsKit | null
+  signTransaction: ((...args: any[]) => any) | null
 }
 
 const WalletContext = createContext<WalletContextType | undefined>(undefined)
@@ -50,6 +50,7 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
   const [isPending, setIsPending] = useState(true)
   const [network, setNetwork] = useState<string | null>(null)
   const popupLock = useRef(false)
+  const kit = typeof window !== "undefined" ? wallet() : null
 
   const updateBalances = useCallback(async () => {
     if (!address) {
@@ -94,13 +95,15 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
 
       try {
         popupLock.current = true
-        wallet.setWallet(walletId)
+        kit?.setWallet(walletId)
 
         if (walletId !== "freighter" && walletAddr) return
 
+        if (!kit) return
+
         const [a, n] = await Promise.all([
-          wallet.getAddress(),
-          wallet.getNetwork(),
+          kit.getAddress(),
+          kit.getNetwork(),
         ])
 
         if (!a.address) {
@@ -220,8 +223,8 @@ export function WalletProvider({ children }: { children: React.ReactNode }) {
         isFreighterInstalled,
         isPending,
         network,
-        kit: wallet,
-        signTransaction: wallet.signTransaction.bind(wallet),
+        kit,
+        signTransaction: kit ? kit.signTransaction.bind(kit) : null,
       }}
     >
       {children}
