@@ -13,6 +13,9 @@ use stellar_access::access_control::{self as access_control, AccessControl};
 use stellar_macros::{default_impl, only_role};
 use stellar_tokens::fungible::{burnable::FungibleBurnable, Base, FungibleToken};
 
+const TTL_THRESHOLD: u32 = 50_000;
+const TTL_EXTEND_TO: u32 = 100_000;
+
 #[contract]
 pub struct EnergyToken;
 
@@ -64,6 +67,7 @@ impl EnergyToken {
     /// * `minter` - Dirección que está minteando (debe tener rol MINTER)
     #[only_role(minter, "minter")]
     pub fn mint_energy(e: &Env, to: Address, amount: i128, minter: Address) {
+        e.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
         Base::mint(e, &to, amount);
     }
 
@@ -73,7 +77,7 @@ impl EnergyToken {
     /// * `from` - Dirección de la que se quemarán tokens
     /// * `amount` - Cantidad de kWh (tokens) a quemar
     pub fn burn_energy(e: &Env, from: Address, amount: i128) {
-        // Base::burn ya maneja la autenticación internamente
+        e.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
         Base::burn(e, &from, amount);
     }
 
@@ -85,6 +89,7 @@ impl EnergyToken {
     pub fn grant_minter(e: &Env, new_minter: Address) {
         let admin = access_control::get_admin(e).expect("admin not set");
         admin.require_auth();
+        e.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
         access_control::grant_role_no_auth(e, &admin, &new_minter, &symbol_short!("minter"));
     }
 
@@ -96,6 +101,7 @@ impl EnergyToken {
     pub fn revoke_minter(e: &Env, minter: Address) {
         let admin = access_control::get_admin(e).expect("admin not set");
         admin.require_auth();
+        e.storage().instance().extend_ttl(TTL_THRESHOLD, TTL_EXTEND_TO);
         access_control::revoke_role_no_auth(e, &admin, &minter, &symbol_short!("minter"));
     }
 
