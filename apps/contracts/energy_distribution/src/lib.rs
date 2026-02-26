@@ -12,6 +12,11 @@ use soroban_sdk::{contract, contractimpl, contracttype, contracterror, Address, 
 
 mod privacy;
 
+const INSTANCE_TTL_THRESHOLD: u32 = 50_000;
+const INSTANCE_TTL_EXTEND_TO: u32 = 100_000;
+const PERSISTENT_TTL_THRESHOLD: u32 = 50_000;
+const PERSISTENT_TTL_EXTEND_TO: u32 = 200_000;
+
 /// Errores del contrato de distribución de energía
 #[contracterror]
 #[derive(Copy, Clone, Debug, Eq, PartialEq, PartialOrd, Ord)]
@@ -25,6 +30,8 @@ pub enum DistributionError {
     PercentsMustSumTo100 = 3,
     /// Los miembros aún no han sido inicializados
     MembersNotInitialized = 4,
+    /// El contrato ya fue inicializado
+    AlreadyInitialized = 5,
 }
 
 #[contracttype]
@@ -70,7 +77,11 @@ impl EnergyDistribution {
     /// * `admin` - Administrador del contrato
     /// * `token_contract` - Dirección del contrato HoneyDrop (HDROP)
     /// * `required_approvals` - Número de firmas requeridas para agregar miembros
-    pub fn initialize(env: Env, admin: Address, token_contract: Address, required_approvals: u32) {
+    pub fn initialize(env: Env, admin: Address, token_contract: Address, required_approvals: u32) -> Result<(), DistributionError> {
+        if env.storage().instance().has(&DataKey::Admin) {
+            return Err(DistributionError::AlreadyInitialized);
+        }
+
         admin.require_auth();
 
         env.storage().instance().set(&DataKey::Admin, &admin);
@@ -86,6 +97,10 @@ impl EnergyDistribution {
         env.storage()
             .instance()
             .set(&DataKey::TotalGenerated, &0i128);
+
+        env.storage().instance().extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND_TO);
+
+        Ok(())
     }
 
     /// Agrega miembros con multi-firma
@@ -130,22 +145,28 @@ impl EnergyDistribution {
         // Crear lista de miembros
         let mut member_list: Vec<Address> = Vec::new(&env);
 
-        // Guardar miembros y sus porcentajes
+        // Guardar miembros y sus porcentajes en persistent storage
         for i in 0..members.len() {
             let member = members.get(i).unwrap();
             let percent = percents.get(i).unwrap();
 
+            let member_key = DataKey::Member(member.clone());
+            let percent_key = DataKey::MemberPercent(member.clone());
+
             env.storage()
-                .instance()
-                .set(&DataKey::Member(member.clone()), &true);
+                .persistent()
+                .set(&member_key, &true);
             env.storage()
-                .instance()
-                .set(&DataKey::MemberPercent(member.clone()), &percent);
+                .persistent()
+                .set(&percent_key, &percent);
+
+            env.storage().persistent().extend_ttl(&member_key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_EXTEND_TO);
+            env.storage().persistent().extend_ttl(&percent_key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_EXTEND_TO);
 
             member_list.push_back(member);
         }
 
-        // Guardar lista de miembros
+        // Guardar lista de miembros (instance — shared config)
         env.storage()
             .instance()
             .set(&DataKey::MemberList, &member_list);
@@ -153,6 +174,8 @@ impl EnergyDistribution {
         env.storage()
             .instance()
             .set(&DataKey::MembersInitialized, &true);
+
+        env.storage().instance().extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND_TO);
 
         Ok(())
     }
@@ -201,11 +224,14 @@ impl EnergyDistribution {
         // Distribuir tokens a cada miembro según su porcentaje
         for i in 0..member_list.len() {
             let member = member_list.get(i).unwrap();
+            let percent_key = DataKey::MemberPercent(member.clone());
             let percent: u32 = env
                 .storage()
-                .instance()
-                .get(&DataKey::MemberPercent(member.clone()))
+                .persistent()
+                .get(&percent_key)
                 .unwrap();
+
+            env.storage().persistent().extend_ttl(&percent_key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_EXTEND_TO);
 
             // Calcular tokens a mintear: (kwh_generated * percent) / 100
             let tokens_to_mint = (kwh_generated * percent as i128) / 100;
@@ -225,6 +251,8 @@ impl EnergyDistribution {
             .instance()
             .set(&DataKey::TotalGenerated, &(current_total + kwh_generated));
 
+        env.storage().instance().extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND_TO);
+
         Ok(())
     }
 
@@ -239,6 +267,7 @@ impl EnergyDistribution {
         admin.require_auth();
 
         env.storage().instance().set(&DataKey::PrivacyEnabled, &true);
+        env.storage().instance().extend_ttl(INSTANCE_TTL_THRESHOLD, INSTANCE_TTL_EXTEND_TO);
     }
 
     /// Registra consumo de forma privada usando un commitment
@@ -283,7 +312,7 @@ impl EnergyDistribution {
         // Verificar que sea miembro
         let is_member: bool = env
             .storage()
-            .instance()
+            .persistent()
             .get(&DataKey::Member(user.clone()))
             .unwrap_or(false);
 
@@ -291,10 +320,12 @@ impl EnergyDistribution {
             return Err(DistributionError::MembersNotInitialized);
         }
 
-        // Almacenar commitment
+        // Almacenar commitment en persistent storage (per-user)
+        let commitment_key = DataKey::UserCommitment(user.clone());
         env.storage()
-            .instance()
-            .set(&DataKey::UserCommitment(user.clone()), &commitment);
+            .persistent()
+            .set(&commitment_key, &commitment);
+        env.storage().persistent().extend_ttl(&commitment_key, PERSISTENT_TTL_THRESHOLD, PERSISTENT_TTL_EXTEND_TO);
 
         Ok(())
     }
@@ -316,7 +347,7 @@ impl EnergyDistribution {
         // Obtener commitment almacenado
         let stored_commitment: Option<BytesN<32>> = env
             .storage()
-            .instance()
+            .persistent()
             .get(&DataKey::UserCommitment(user));
 
         match stored_commitment {
@@ -354,14 +385,14 @@ impl EnergyDistribution {
 
     pub fn is_member(env: Env, address: Address) -> bool {
         env.storage()
-            .instance()
+            .persistent()
             .get(&DataKey::Member(address))
             .unwrap_or(false)
     }
 
     pub fn get_member_percent(env: Env, address: Address) -> Option<u32> {
         env.storage()
-            .instance()
+            .persistent()
             .get(&DataKey::MemberPercent(address))
     }
 
@@ -418,10 +449,14 @@ mod test {
         let result = client.try_initialize(&admin, &token_contract, &3);
         assert!(result.is_ok());
 
-        assert_eq!(client.get_admin(), Some(admin));
-        assert_eq!(client.get_token_contract(), Some(token_contract));
+        assert_eq!(client.get_admin(), Some(admin.clone()));
+        assert_eq!(client.get_token_contract(), Some(token_contract.clone()));
         assert_eq!(client.get_required_approvals(), Some(3));
         assert_eq!(client.are_members_initialized(), false);
+
+        // Re-initialization must fail
+        let result2 = client.try_initialize(&admin, &token_contract, &3);
+        assert!(result2.is_err());
     }
 
     #[test]
@@ -440,7 +475,7 @@ mod test {
         let investor4 = Address::generate(&env);
         let investor5 = Address::generate(&env);
 
-        client.try_initialize(&admin, &token_contract, &3).unwrap();
+        let _ = client.try_initialize(&admin, &token_contract, &3).unwrap();
 
         let approvers = vec![
             &env,
