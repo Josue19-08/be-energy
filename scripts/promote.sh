@@ -10,11 +10,9 @@ usage() {
   echo "Usage: ./scripts/promote.sh <command>"
   echo ""
   echo "Commands:"
-  echo "  sync      Sync main → staging → develop (fix drift)"
-  echo "  staging   Create PR develop → staging"
-  echo "  main      Create PR staging → main"
-  echo "  all       Create both PRs (develop → staging, then staging → main)"
-  echo "  merge     Merge all open promote PRs (uses merge commit, not squash)"
+  echo "  sync      Sync main → develop (fix drift)"
+  echo "  promote   Create PR develop → main"
+  echo "  merge     Merge open promote PR (uses merge commit, not squash)"
   exit 1
 }
 
@@ -41,26 +39,6 @@ create_pr() {
     --body "Automated promotion of \`$from\` into \`$to\` ($diff_count commits)."
 }
 
-sync_branches() {
-  echo "Fetching latest..."
-  git fetch origin main staging develop
-
-  echo ""
-  echo "Syncing staging with main..."
-  git checkout staging
-  git merge origin/main --no-edit
-  git push origin staging
-
-  echo ""
-  echo "Syncing develop with staging..."
-  git checkout develop
-  git merge origin/staging --no-edit
-  git push origin develop
-
-  echo ""
-  echo "Sync complete. All branches are up to date."
-}
-
 merge_pr() {
   local from=$1 to=$2
   pr_number=$(gh pr list --base "$to" --head "$from" --json number -q '.[0].number' 2>/dev/null || true)
@@ -74,27 +52,31 @@ merge_pr() {
   echo "PR #$pr_number merged."
 }
 
+sync_branches() {
+  echo "Fetching latest..."
+  git fetch origin main develop
+
+  echo ""
+  echo "Syncing develop with main..."
+  git checkout develop
+  git merge origin/main --no-edit
+  git push origin develop
+
+  echo ""
+  echo "Sync complete. develop is up to date with main."
+}
+
 [ $# -lt 1 ] && usage
 
 case "$1" in
   sync)
     sync_branches
     ;;
-  staging)
-    create_pr develop staging
-    ;;
-  main)
-    create_pr staging main
-    ;;
-  all)
-    create_pr develop staging
-    echo ""
-    create_pr staging main
+  promote)
+    create_pr develop main
     ;;
   merge)
-    merge_pr develop staging
-    echo ""
-    merge_pr staging main
+    merge_pr develop main
     ;;
   *)
     usage

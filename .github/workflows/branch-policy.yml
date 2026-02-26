@@ -2,7 +2,7 @@ name: Branch Policy
 
 on:
   pull_request:
-    branches: [main, staging, develop]
+    branches: [main, develop]
 
 jobs:
   check-branch-policy:
@@ -15,13 +15,8 @@ jobs:
         run: |
           echo "PR: $HEAD → $BASE"
 
-          if [ "$BASE" = "main" ] && [ "$HEAD" != "staging" ]; then
-            echo "::error::PRs to main must come from staging (got $HEAD)"
-            exit 1
-          fi
-
-          if [ "$BASE" = "staging" ] && [ "$HEAD" != "develop" ]; then
-            echo "::error::PRs to staging must come from develop (got $HEAD)"
+          if [ "$BASE" = "main" ] && [ "$HEAD" != "develop" ]; then
+            echo "::error::PRs to main must come from develop (got $HEAD)"
             exit 1
           fi
 
