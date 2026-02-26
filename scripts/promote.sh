@@ -14,6 +14,7 @@ usage() {
   echo "  staging   Create PR develop → staging"
   echo "  main      Create PR staging → main"
   echo "  all       Create both PRs (develop → staging, then staging → main)"
+  echo "  merge     Merge all open promote PRs (uses merge commit, not squash)"
   exit 1
 }
 
@@ -60,6 +61,19 @@ sync_branches() {
   echo "Sync complete. All branches are up to date."
 }
 
+merge_pr() {
+  local from=$1 to=$2
+  pr_number=$(gh pr list --base "$to" --head "$from" --json number -q '.[0].number' 2>/dev/null || true)
+  if [ -z "$pr_number" ]; then
+    echo "No open PR found for $from → $to"
+    return 0
+  fi
+
+  echo "Merging PR #$pr_number ($from → $to) with merge commit..."
+  gh pr merge "$pr_number" --merge
+  echo "PR #$pr_number merged."
+}
+
 [ $# -lt 1 ] && usage
 
 case "$1" in
@@ -76,6 +90,11 @@ case "$1" in
     create_pr develop staging
     echo ""
     create_pr staging main
+    ;;
+  merge)
+    merge_pr develop staging
+    echo ""
+    merge_pr staging main
     ;;
   *)
     usage
