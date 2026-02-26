@@ -433,7 +433,33 @@ impl EnergyDistribution {
 #[cfg(test)]
 mod test {
     use super::*;
-    use soroban_sdk::{testutils::Address as _, vec, Env};
+    use soroban_sdk::{testutils::Address as _, vec, Bytes, BytesN, Env};
+
+    // Helper: register distribution contract and initialize
+    fn setup<'a>(env: &'a Env) -> (EnergyDistributionClient<'a>, Address, Address) {
+        let contract_id = env.register(EnergyDistribution, ());
+        let client = EnergyDistributionClient::new(env, &contract_id);
+        let admin = Address::generate(env);
+        let token_contract = Address::generate(env);
+        let _ = client.try_initialize(&admin, &token_contract, &3).unwrap();
+        (client, admin, token_contract)
+    }
+
+    // Helper: setup with members registered (2 members: 60%/40%)
+    fn setup_with_members<'a>(env: &'a Env) -> (EnergyDistributionClient<'a>, Address, Address, Address, Address) {
+        let (client, admin, token_contract) = setup(env);
+        let member1 = Address::generate(env);
+        let member2 = Address::generate(env);
+        let approvers = vec![env, member1.clone(), member2.clone(), admin.clone()];
+        let members = vec![env, member1.clone(), member2.clone()];
+        let percents = vec![env, 60, 40];
+        client.add_members_multisig(&approvers, &members, &percents);
+        (client, admin, token_contract, member1, member2)
+    }
+
+    // ========================================================================
+    // Initialization
+    // ========================================================================
 
     #[test]
     fn test_initialize() {
@@ -442,7 +468,6 @@ mod test {
 
         let contract_id = env.register(EnergyDistribution, ());
         let client = EnergyDistributionClient::new(&env, &contract_id);
-
         let admin = Address::generate(&env);
         let token_contract = Address::generate(&env);
 
@@ -452,65 +477,301 @@ mod test {
         assert_eq!(client.get_admin(), Some(admin.clone()));
         assert_eq!(client.get_token_contract(), Some(token_contract.clone()));
         assert_eq!(client.get_required_approvals(), Some(3));
-        assert_eq!(client.are_members_initialized(), false);
-
-        // Re-initialization must fail
-        let result2 = client.try_initialize(&admin, &token_contract, &3);
-        assert!(result2.is_err());
+        assert!(!client.are_members_initialized());
+        assert_eq!(client.get_total_generated(), 0);
     }
+
+    #[test]
+    fn test_reinitialize_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, admin, token_contract) = setup(&env);
+
+        let result = client.try_initialize(&admin, &token_contract, &5);
+        assert!(result.is_err());
+    }
+
+    // ========================================================================
+    // Add Members Multisig
+    // ========================================================================
 
     #[test]
     fn test_add_members_multisig_success() {
         let env = Env::default();
         env.mock_all_auths();
+        let (client, admin, _) = setup(&env);
 
-        let contract_id = env.register(EnergyDistribution, ());
-        let client = EnergyDistributionClient::new(&env, &contract_id);
+        let m1 = Address::generate(&env);
+        let m2 = Address::generate(&env);
+        let m3 = Address::generate(&env);
 
-        let admin = Address::generate(&env);
-        let token_contract = Address::generate(&env);
-        let investor1 = Address::generate(&env);
-        let investor2 = Address::generate(&env);
-        let investor3 = Address::generate(&env);
-        let investor4 = Address::generate(&env);
-        let investor5 = Address::generate(&env);
-
-        let _ = client.try_initialize(&admin, &token_contract, &3).unwrap();
-
-        let approvers = vec![
-            &env,
-            investor1.clone(),
-            investor2.clone(),
-            investor3.clone(),
-        ];
-        let members = vec![
-            &env,
-            investor1.clone(),
-            investor2.clone(),
-            investor3.clone(),
-            investor4.clone(),
-            investor5.clone(),
-        ];
-        let percents = vec![&env, 20, 30, 15, 25, 10];
+        let approvers = vec![&env, m1.clone(), m2.clone(), admin.clone()];
+        let members = vec![&env, m1.clone(), m2.clone(), m3.clone()];
+        let percents = vec![&env, 50, 30, 20];
 
         let result = client.try_add_members_multisig(&approvers, &members, &percents);
         assert!(result.is_ok());
 
-        assert!(client.is_member(&investor1));
-        assert!(client.is_member(&investor2));
-        assert!(client.is_member(&investor3));
-        assert!(client.is_member(&investor4));
-        assert!(client.is_member(&investor5));
-
-        assert_eq!(client.get_member_percent(&investor1), Some(20));
-        assert_eq!(client.get_member_percent(&investor2), Some(30));
-        assert_eq!(client.get_member_percent(&investor3), Some(15));
-        assert_eq!(client.get_member_percent(&investor4), Some(25));
-        assert_eq!(client.get_member_percent(&investor5), Some(10));
-
+        assert!(client.is_member(&m1));
+        assert!(client.is_member(&m2));
+        assert!(client.is_member(&m3));
+        assert_eq!(client.get_member_percent(&m1), Some(50));
+        assert_eq!(client.get_member_percent(&m2), Some(30));
+        assert_eq!(client.get_member_percent(&m3), Some(20));
         assert!(client.are_members_initialized());
+        assert_eq!(client.get_member_list().len(), 3);
+    }
 
-        let member_list = client.get_member_list();
-        assert_eq!(member_list.len(), 5);
+    #[test]
+    fn test_add_members_not_enough_approvers() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _) = setup(&env); // requires 3 approvers
+
+        let m1 = Address::generate(&env);
+        let m2 = Address::generate(&env);
+
+        // Only 2 approvers, need 3
+        let approvers = vec![&env, m1.clone(), m2.clone()];
+        let members = vec![&env, m1.clone(), m2.clone()];
+        let percents = vec![&env, 60, 40];
+
+        let result = client.try_add_members_multisig(&approvers, &members, &percents);
+        assert_eq!(result, Err(Ok(DistributionError::NotEnoughApprovers)));
+    }
+
+    #[test]
+    fn test_add_members_percent_mismatch() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, admin, _) = setup(&env);
+
+        let m1 = Address::generate(&env);
+        let m2 = Address::generate(&env);
+
+        let approvers = vec![&env, m1.clone(), m2.clone(), admin.clone()];
+        let members = vec![&env, m1.clone(), m2.clone()];
+        let percents = vec![&env, 60u32]; // 1 percent for 2 members
+
+        let result = client.try_add_members_multisig(&approvers, &members, &percents);
+        assert_eq!(result, Err(Ok(DistributionError::MemberPercentMismatch)));
+    }
+
+    #[test]
+    fn test_add_members_percents_not_100() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, admin, _) = setup(&env);
+
+        let m1 = Address::generate(&env);
+        let m2 = Address::generate(&env);
+
+        let approvers = vec![&env, m1.clone(), m2.clone(), admin.clone()];
+        let members = vec![&env, m1.clone(), m2.clone()];
+        let percents = vec![&env, 60, 30]; // sums to 90, not 100
+
+        let result = client.try_add_members_multisig(&approvers, &members, &percents);
+        assert_eq!(result, Err(Ok(DistributionError::PercentsMustSumTo100)));
+    }
+
+    #[test]
+    fn test_single_member_100_percent() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _) = setup(&env);
+
+        let m1 = Address::generate(&env);
+        let a2 = Address::generate(&env);
+        let a3 = Address::generate(&env);
+
+        let approvers = vec![&env, m1.clone(), a2.clone(), a3.clone()];
+        let members = vec![&env, m1.clone()];
+        let percents = vec![&env, 100u32];
+
+        let result = client.try_add_members_multisig(&approvers, &members, &percents);
+        assert!(result.is_ok());
+        assert_eq!(client.get_member_percent(&m1), Some(100));
+    }
+
+    // ========================================================================
+    // Record Generation (cross-contract)
+    // ========================================================================
+
+    #[test]
+    fn test_record_generation_without_members_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _) = setup(&env);
+
+        let result = client.try_record_generation(&100_0000000);
+        assert_eq!(result, Err(Ok(DistributionError::MembersNotInitialized)));
+    }
+
+    #[test]
+    fn test_total_generated_starts_at_zero() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _) = setup(&env);
+
+        assert_eq!(client.get_total_generated(), 0);
+    }
+
+    // ========================================================================
+    // Privacy Functions
+    // ========================================================================
+
+    #[test]
+    fn test_enable_privacy() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _, _, _) = setup_with_members(&env);
+
+        // enable_privacy should not panic
+        client.enable_privacy();
+    }
+
+    #[test]
+    fn test_record_private_consumption_non_member_fails() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _, _, _) = setup_with_members(&env);
+
+        let non_member = Address::generate(&env);
+        let commitment = BytesN::from_array(&env, &[1u8; 32]);
+
+        let result = client.try_record_private_consumption(&non_member, &commitment);
+        assert_eq!(result, Err(Ok(DistributionError::MembersNotInitialized)));
+    }
+
+    #[test]
+    fn test_record_private_consumption_member_succeeds() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _, member1, _) = setup_with_members(&env);
+
+        let commitment = BytesN::from_array(&env, &[1u8; 32]);
+
+        let result = client.try_record_private_consumption(&member1, &commitment);
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn test_verify_private_consumption_valid() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _, member1, _) = setup_with_members(&env);
+
+        let commitment = client.generate_commitment_helper(
+            &BytesN::from_array(&env, &[1u8; 32]),
+            &100_0000000,
+            &BytesN::from_array(&env, &[2u8; 32]),
+        );
+
+        // Store commitment
+        client.record_private_consumption(&member1, &commitment);
+
+        // Verify with matching data
+        let data = privacy::hash_consumption_data(
+            &env,
+            &BytesN::from_array(&env, &[1u8; 32]),
+            100_0000000,
+            &BytesN::from_array(&env, &[2u8; 32]),
+        );
+        let is_valid = client.verify_private_consumption(&member1, &data);
+        assert!(is_valid);
+    }
+
+    #[test]
+    fn test_verify_private_consumption_invalid() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _, member1, _) = setup_with_members(&env);
+
+        let commitment = client.generate_commitment_helper(
+            &BytesN::from_array(&env, &[1u8; 32]),
+            &100_0000000,
+            &BytesN::from_array(&env, &[2u8; 32]),
+        );
+
+        client.record_private_consumption(&member1, &commitment);
+
+        // Verify with wrong data
+        let wrong_data = Bytes::from_array(&env, &[9u8; 80]);
+        let is_valid = client.verify_private_consumption(&member1, &wrong_data);
+        assert!(!is_valid);
+    }
+
+    #[test]
+    fn test_verify_no_commitment_returns_false() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _, member1, _) = setup_with_members(&env);
+
+        let data = Bytes::from_array(&env, &[1u8; 80]);
+        let is_valid = client.verify_private_consumption(&member1, &data);
+        assert!(!is_valid);
+    }
+
+    #[test]
+    fn test_commitment_overwrite() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _, member1, _) = setup_with_members(&env);
+
+        let commitment1 = BytesN::from_array(&env, &[1u8; 32]);
+        let commitment2 = BytesN::from_array(&env, &[2u8; 32]);
+
+        client.record_private_consumption(&member1, &commitment1);
+        client.record_private_consumption(&member1, &commitment2);
+
+        // Old commitment data should not verify
+        let data1 = Bytes::from_array(&env, &[1u8; 80]);
+        assert!(!client.verify_private_consumption(&member1, &data1));
+    }
+
+    // ========================================================================
+    // View Functions
+    // ========================================================================
+
+    #[test]
+    fn test_is_member_false_for_non_member() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _, _, _) = setup_with_members(&env);
+
+        let outsider = Address::generate(&env);
+        assert!(!client.is_member(&outsider));
+    }
+
+    #[test]
+    fn test_get_member_percent_none_for_non_member() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _, _, _) = setup_with_members(&env);
+
+        let outsider = Address::generate(&env);
+        assert_eq!(client.get_member_percent(&outsider), None);
+    }
+
+    #[test]
+    fn test_member_list_empty_before_init() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (client, _, _) = setup(&env);
+
+        assert_eq!(client.get_member_list().len(), 0);
+    }
+
+    #[test]
+    fn test_views_before_initialize() {
+        let env = Env::default();
+        let contract_id = env.register(EnergyDistribution, ());
+        let client = EnergyDistributionClient::new(&env, &contract_id);
+
+        assert_eq!(client.get_admin(), None);
+        assert_eq!(client.get_token_contract(), None);
+        assert_eq!(client.get_required_approvals(), None);
+        assert!(!client.are_members_initialized());
+        assert_eq!(client.get_total_generated(), 0);
     }
 }
