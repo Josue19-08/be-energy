@@ -46,8 +46,16 @@ Uses Protocol 22+ `__constructor` pattern (preferred).
 
 Inherited SEP-41 functions via `#[default_impl]`: `transfer`, `balance`, `approve`, `total_supply`, `name`, `symbol`, `decimals`, `burn`.
 
-### Tests (6)
-`test_initialize`, `test_mint_energy`, `test_burn_energy`, `test_transfer_between_users`, `test_grant_and_revoke_minter`, `test_initial_supply`
+### Tests (21)
+
+| Category | Tests |
+|----------|-------|
+| Constructor | `test_initialize`, `test_initial_supply`, `test_zero_initial_supply_no_mint` |
+| Minting | `test_mint_energy`, `test_mint_multiple_users`, `test_mint_accumulates_balance`, `test_mint_small_amount` |
+| Burning | `test_burn_energy`, `test_burn_entire_balance`, `test_burn_more_than_balance_fails`, `test_burn_zero_balance_fails` |
+| Transfers | `test_transfer_between_users`, `test_transfer_preserves_total_supply`, `test_transfer_more_than_balance_fails` |
+| Access Control | `test_grant_and_revoke_minter`, `test_multiple_minters`, `test_non_minter_cannot_mint`, `test_revoked_minter_cannot_mint`, `test_is_minter_false_for_random_address` |
+| Edge Cases | `test_balance_of_unknown_address_is_zero`, `test_mint_then_burn_then_mint` |
 
 ---
 
@@ -70,6 +78,7 @@ pub enum DistributionError {
     MemberPercentMismatch = 2,
     PercentsMustSumTo100 = 3,
     MembersNotInitialized = 4,
+    AlreadyInitialized = 5,
 }
 ```
 
@@ -103,9 +112,16 @@ Commitment-based privacy simulation. Placeholder for ZK-SNARKs/Groth16.
 | `verify_commitment` | `commitment: &BytesN<32>, user_data: &Bytes` | Compares SHA256(user_data) vs stored commitment |
 | `hash_consumption_data` | `user_address: &BytesN<32>, consumed_kwh: i128, secret: &BytesN<32>` | Builds 80-byte payload → SHA256 |
 
-### Tests (8)
-Contract: `test_initialize`, `test_add_members_multisig_success`
-Privacy: `test_generate_commitment`, `test_verify_commitment_valid`, `test_verify_commitment_invalid`, `test_hash_consumption_data`, `test_same_data_same_commitment`, `test_different_data_different_commitment`
+### Tests (26)
+
+| Category | Tests |
+|----------|-------|
+| Initialization | `test_initialize`, `test_reinitialize_fails` |
+| Multisig Members | `test_add_members_multisig_success`, `test_add_members_not_enough_approvers`, `test_add_members_percent_mismatch`, `test_add_members_percents_not_100`, `test_single_member_100_percent` |
+| Record Generation | `test_record_generation_without_members_fails`, `test_total_generated_starts_at_zero` |
+| Privacy | `test_enable_privacy`, `test_record_private_consumption_non_member_fails`, `test_record_private_consumption_member_succeeds`, `test_verify_private_consumption_valid`, `test_verify_private_consumption_invalid`, `test_verify_no_commitment_returns_false`, `test_commitment_overwrite` |
+| View Functions | `test_is_member_false_for_non_member`, `test_get_member_percent_none_for_non_member`, `test_member_list_empty_before_init`, `test_views_before_initialize` |
+| Privacy Module | `test_generate_commitment`, `test_verify_commitment_valid`, `test_verify_commitment_invalid`, `test_hash_consumption_data`, `test_same_data_same_commitment`, `test_different_data_different_commitment` |
 
 ---
 
@@ -129,11 +145,20 @@ pub struct Proposal {
 
 | Function | Parameters | Auth | Description |
 |----------|-----------|------|-------------|
-| `initialize` | `admin: Address` | Admin (`require_auth`) | Sets admin and proposal count to 0 |
+| `initialize` | `admin: Address` | Admin (`require_auth`) | Sets admin and proposal count to 0. Returns `Err(AlreadyInitialized)` if called twice |
 | `create_proposal` | `proposer: Address, title: String` | Proposer (`require_auth`) | Creates proposal with 0/0 votes. Returns proposal ID |
 | `get_proposal_count` | — | View | Returns total proposals created |
+| `get_proposal` | `id: u32` | View | Returns `Option<Proposal>` |
 
-**Missing:** `vote`, `execute_proposal`, `get_proposal`, quorum logic.
+**Missing:** `vote`, `execute_proposal`, quorum logic.
+
+### Tests (10)
+
+| Category | Tests |
+|----------|-------|
+| Initialization | `test_initialize`, `test_reinitialize_fails`, `test_reinitialize_with_different_admin_fails` |
+| Proposals | `test_create_proposal`, `test_create_multiple_proposals`, `test_proposal_data_stored_correctly`, `test_different_proposers`, `test_get_nonexistent_proposal` |
+| Edge Cases | `test_proposal_count_before_initialize`, `test_sequential_ids_never_skip` |
 
 ---
 
@@ -223,48 +248,22 @@ The dashboard (`app/dashboard/page.tsx`) shows a "DeFindex Yield" section with A
 
 Flagged against the `stellar-dev` skill (`common-pitfalls.md`, `contracts-soroban.md`):
 
-### CRITICAL: No TTL Management
+### ~~CRITICAL: No TTL Management~~ — FIXED
 
-**None of the 3 contracts call `extend_ttl()` on any storage.**
+All 3 contracts now call `extend_ttl()` on every state-changing function.
+- Instance storage: threshold 50,000 / extend to 100,000 ledgers
+- Persistent storage: threshold 50,000 / extend to 200,000 ledgers
 
-Per `common-pitfalls.md` pitfall #3: contract data stored on Soroban has a limited lifetime (TTL). Without explicit TTL extension, all stored data (members, balances, admin addresses, commitments) will be archived and become inaccessible after a period of inactivity.
+### ~~HIGH: All Data in Instance Storage~~ — FIXED
 
-**Fix required in all contracts:**
-```rust
-// Extend instance storage TTL on every state-changing call
-env.storage().instance().extend_ttl(50_000, 100_000);
+Per-user data migrated to `persistent()` storage:
+- `DataKey::Member(Address)`, `DataKey::MemberPercent(Address)`, `DataKey::UserCommitment(Address)` → persistent
+- `DataKey::Proposal(u32)` → persistent
+- Shared config (Admin, TokenContract, MemberList, etc.) remains in instance
 
-// For persistent storage (if migrated):
-env.storage().persistent().extend_ttl(&key, 50_000, 100_000);
-```
+### ~~HIGH: Missing Re-initialization Guards~~ — FIXED
 
-### HIGH: All Data in Instance Storage
-
-All three contracts store everything in `instance()` storage, including per-user data (member percentages, privacy commitments, proposals).
-
-Per `contracts-soroban.md`, instance storage is shared — all keys share a single TTL and are loaded together. Per-user data should use `persistent()` storage for:
-- Independent TTL per user (inactive users don't cost active users)
-- Lower cost at scale (not loading all data on every call)
-- Better size limits (instance storage has tighter bounds)
-
-**Candidates for `persistent()` migration:**
-- `DataKey::Member(Address)` and `DataKey::MemberPercent(Address)`
-- `DataKey::UserCommitment(Address)`
-- `DataKey::Proposal(u32)`
-
-### HIGH: Missing Re-initialization Guards
-
-`energy_distribution::initialize` and `community_governance::initialize` can be called multiple times, potentially resetting the admin and all state. The `energy_token` contract avoids this by using `__constructor` (runs only at deploy).
-
-**Fix:**
-```rust
-pub fn initialize(env: Env, admin: Address) {
-    if env.storage().instance().has(&DataKey::Admin) {
-        panic!("already initialized");
-    }
-    // ... rest of initialization
-}
-```
+Both `energy_distribution::initialize` and `community_governance::initialize` now return `Err(AlreadyInitialized)` if called after first initialization. Covered by tests.
 
 ### MEDIUM: Inconsistent Initialization Patterns
 
@@ -291,3 +290,17 @@ No Makefile, shell scripts, or CI pipeline for building/deploying contracts. Dep
 ### INFO: Tests Use `mock_all_auths()`
 
 All contract tests use `mock_all_auths()` which bypasses real authorization checks. This is standard for unit testing but means auth logic is not verified in tests. Consider adding integration tests with real auth flows.
+
+---
+
+## 7. Test Coverage Summary
+
+**57 tests total, all passing.**
+
+| Contract | Tests | Categories |
+|----------|-------|-----------|
+| `energy_token` | 21 | Constructor (3), Minting (4), Burning (4), Transfers (3), Access Control (5), Edge Cases (2) |
+| `energy_distribution` | 26 | Init (2), Multisig (5), Generation (2), Privacy (7), Views (4), Privacy Module (6) |
+| `community_governance` | 10 | Init (3), Proposals (5), Edge Cases (2) |
+
+Run tests: `cd apps/contracts && cargo test`
