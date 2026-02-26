@@ -7,7 +7,7 @@ import {
   sep43Modules,
 } from "@creit.tech/stellar-wallets-kit";
 import { Horizon } from "@stellar/stellar-sdk";
-import storage from "./storage";
+import { storage } from "./storage"
 import { networkPassphrase, stellarNetwork, getHorizonHost } from "./stellar-config";
 
 // Initialize Stellar Wallets Kit

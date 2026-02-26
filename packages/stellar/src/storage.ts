@@ -61,4 +61,4 @@ class TypedStorage<T> {
   }
 }
 
-export default new TypedStorage<Schema>();
+export const storage = new TypedStorage<Schema>();
