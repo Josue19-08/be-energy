@@ -97,6 +97,10 @@ Powered by **Turborepo** + **npm workspaces**.
 - **Node.js** v22+ (we use v22 for Corepack compatibility)
 - **npm** v10+ (comes with Node)
 - **Rust** + Cargo (for contracts)
+- **Windows only:** Visual Studio Build Tools with the **"Desktop development with C++"** workload
+   Required to compile native Rust dependencies (e.g., to run `cargo test`).
+   → [Download installer](https://aka.ms/vs/17/release/vs_BuildTools.exe) (~3-6 GB)
+   After installing, restart your terminal before running any Rust commands.
 
 ### Installation
 
