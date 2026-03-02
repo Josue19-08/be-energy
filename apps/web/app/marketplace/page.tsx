@@ -43,7 +43,7 @@ export default function MarketplacePage() {
   const [selectedOffer, setSelectedOffer] = useState<Offer | null>(null)
   const [newOfferAmount, setNewOfferAmount] = useState("")
   const [newOfferPrice, setNewOfferPrice] = useState("")
-  const [successData, setSuccessData] = useState<{ type: "compra" | "venta"; amount: number; xlmAmount: number }>({
+  const [successData, setSuccessData] = useState<{ type: "compra" | "venta"; amount: number; xlmAmount: number; txHash?: string }>({
     type: "compra",
     amount: 0,
     xlmAmount: 0,
@@ -380,6 +380,7 @@ export default function MarketplacePage() {
         type={successData.type}
         amount={successData.amount}
         xlmAmount={successData.xlmAmount}
+        txHash={successData.txHash}
       />
     </div>
   )

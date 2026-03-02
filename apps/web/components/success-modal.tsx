@@ -22,7 +22,7 @@ export function SuccessModal({
   type,
   amount,
   xlmAmount,
-  txHash = "ABC123DEF456GHI789JKL012MNO345PQR678",
+  txHash = "",
 }: SuccessModalProps) {
   const router = useRouter()
   const { t } = useI18n()
@@ -48,7 +48,7 @@ export function SuccessModal({
     router.push("/dashboard")
   }
 
-  const shortHash = `${txHash.slice(0, 8)}...${txHash.slice(-8)}`
+  const shortHash = txHash ? `${txHash.slice(0, 8)}...${txHash.slice(-8)}` : null
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -105,25 +105,26 @@ export function SuccessModal({
           </div>
 
           {/* Transaction Hash */}
-          <div className="w-full space-y-2">
-            <p className="text-sm text-muted-foreground">{t("success.txHash")}</p>
-            <div className="flex items-center gap-2 bg-muted rounded-lg p-3">
-              <code className="flex-1 text-sm font-mono truncate">{shortHash}</code>
-              <Button size="sm" variant="ghost" onClick={handleCopy} className="flex-shrink-0">
-                {copied ? <CheckCircle className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
-              </Button>
+          {txHash && (
+            <div className="w-full space-y-2">
+              <p className="text-sm text-muted-foreground">{t("success.txHash")}</p>
+              <div className="flex items-center gap-2 bg-muted rounded-lg p-3">
+                <code className="flex-1 text-sm font-mono truncate">{shortHash}</code>
+                <Button size="sm" variant="ghost" onClick={handleCopy} className="flex-shrink-0">
+                  {copied ? <CheckCircle className="w-4 h-4 text-success" /> : <Copy className="w-4 h-4" />}
+                </Button>
+              </div>
+              <a
+                href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm text-primary hover:underline flex items-center gap-1 justify-center"
+              >
+                {t("success.viewOnStellarExpert")}
+                <ExternalLink className="w-3 h-3" />
+              </a>
             </div>
-            <a
-              href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm text-primary hover:underline flex items-center gap-1 justify-center"
-            >
-              {t("success.viewOnStellarExpert")}
-              <ExternalLink className="w-3 h-3" />
-            </a>
-          </div>
-
+          )}
           {/* Action Button */}
           <Button onClick={handleClose} className="w-full gradient-primary text-white font-semibold" size="lg">
             {t("success.close")}
