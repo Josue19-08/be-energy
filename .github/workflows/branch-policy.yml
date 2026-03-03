@@ -2,7 +2,7 @@ name: Branch Policy
 
 on:
   pull_request:
-    branches: [main, develop]
+    branches: [main]
 
 jobs:
   check-branch-policy:
