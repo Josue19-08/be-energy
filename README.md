@@ -199,12 +199,16 @@ pnpm dev
 - ✅ Innovation Certificate awarded
 - ✅ Initial smart contracts deployed
 
-**Q1 2026** _(Current)_
+**Q1 2026 — v0.2.0** _(Drips Wave #2)_
 - ✅ Monorepo architecture upgrade
 - ✅ Contracts refactored with OpenZeppelin Stellar
 - ✅ Frontend deployed to production
-- 🚧 Connect frontend to real contract data
-- 🚧 Marketplace P2P trading integration
+- ✅ Frontend connected to real contract data
+
+**Q1 2026 — v0.3.0** _(Current)_
+- ✅ Marketplace P2P trading with Supabase backend
+- ✅ API routes for offers, readings, minting, DeFindex
+- ✅ GitBook documentation
 
 **Q2 2026**
 - Deploy to Stellar mainnet
