@@ -25,7 +25,7 @@ import { mockOffers, generateIdenticon, mockUser } from "@/lib/mock-data"
 import { useEnergyToken } from "@/hooks/useEnergyToken"
 
 interface Offer {
-  id: number
+  id: string | number
   seller: string
   sellerShort: string
   amount: number
@@ -67,15 +67,33 @@ export default function MarketplacePage() {
   }, [isConnected, router])
 
   useEffect(() => {
-    const savedOffers = localStorage.getItem("marketplaceOffers")
+    const fetchOffers = async () => {
+      try { 
+        const response = await fetch("/api/offers")
+        const data = await response.json()
+        if (Array.isArray(data)) {
+          const mapped = data.map((offer: any) => ({
+            id: offer.id,
+            seller: offer.seller_address,
+            sellerShort: offer.seller_short,
+            amount: offer.amount_kwh,
+            pricePerKwh: offer.price_per_kwh,
+            total: offer.total_xlm
+          }))
+          setOffers(mapped)
+        }
+
+      } catch (err) {
+        console.error("Error fetching offers:", err)
+      }
+    }
+
     const savedStockKwh = localStorage.getItem("userStockKwh")
 
-    if (savedOffers) {
-      setOffers(JSON.parse(savedOffers))
-    }
     if (savedStockKwh) {
       setUserStockKwh(Number.parseFloat(savedStockKwh))
     }
+    fetchOffers()
   }, [])
 
   useEffect(() => {
@@ -113,31 +131,48 @@ export default function MarketplacePage() {
 
   const totalAvailableKwh = offers.reduce((sum, offer) => sum + offer.amount, 0)
 
-  const handleCreateOffer = () => {
+  const handleCreateOffer = async () => {
     const amount = Number.parseFloat(newOfferAmount)
     const price = Number.parseFloat(newOfferPrice)
     const xlmAmount = Number.parseFloat(calculateTotal())
 
-    const newOffer: Offer = {
-      id: Date.now(),
-      seller: address || "unknown",
-      sellerShort: address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "unknown",
-      amount,
-      pricePerKwh: price,
-      total: xlmAmount,
+    try {
+      const response = await fetch("/api/offers", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          seller_address: address || "unknown",
+          amount_kwh: amount,
+          price_per_kwh: price,
+          total_xlm: xlmAmount,
+        }),
+      })
+      const newOffer = await response.json()
+
+      if (!response.ok) {
+        console.error("Error creating offer:", newOffer.error)
+        return
+      }
+
+      const mapped: Offer = {
+        id: newOffer.id,
+        seller: newOffer.seller_address,
+        sellerShort: newOffer.seller_short,
+        amount: newOffer.amount_kwh,
+        pricePerKwh: newOffer.price_per_kwh,
+        total: newOffer.total_xlm,
+      }
+
+      setOffers([...offers, mapped])
+      setSuccessData({ type: "venta", amount, xlmAmount })
+      setShowCreateModal(false)
+      setShowSuccessModal(true)
+      setNewOfferAmount("")
+      setNewOfferPrice("")
+    } catch (err) {
+      console.error("Error creating offer:", err)
     }
-
-    const updatedOffers = [...offers, newOffer]
-    setOffers(updatedOffers)
-    localStorage.setItem("marketplaceOffers", JSON.stringify(updatedOffers))
-
-    setSuccessData({ type: "venta", amount, xlmAmount })
-    setShowCreateModal(false)
-    setShowSuccessModal(true)
-    setNewOfferAmount("")
-    setNewOfferPrice("")
   }
-
   const handleBuy = (offer: Offer) => {
     setSelectedOffer(offer)
     setShowBuyModal(true)
@@ -148,9 +183,14 @@ export default function MarketplacePage() {
       try {
         const txHash = await transfer(selectedOffer.seller, selectedOffer.amount)
 
+        await fetch("/api/offers", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: selectedOffer.id, status: "sold", tx_hash: txHash }),
+        })
+
         const updatedOffers = offers.filter((offer) => offer.id !== selectedOffer.id)
         setOffers(updatedOffers)
-        localStorage.setItem("marketplaceOffers", JSON.stringify(updatedOffers))
 
         const newStock = userStockKwh + selectedOffer.amount
         setUserStockKwh(newStock)
