@@ -33,7 +33,7 @@ Each **1 HDROP = 1 kWh** of solar energy generated and injected into the grid.
 
 ## Current Status
 
-**v0.2.0** — Drips Wave #2, pre-production on Stellar Testnet.
+**v0.3.0** — Pre-production on Stellar Testnet. Backend API fully operational with Supabase persistence.
 
 ## Quick Links
 
