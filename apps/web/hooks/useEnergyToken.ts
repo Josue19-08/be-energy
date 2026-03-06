@@ -5,7 +5,20 @@ import { useWallet } from "@/lib/wallet-context"
 import { CONTRACTS, STELLAR_CONFIG, NETWORK_PASSPHRASE } from "@/lib/contracts-config"
 import * as StellarSdk from "@stellar/stellar-sdk"
 
-
+function translateStellarError(err: unknown): string {
+  const msg = err instanceof Error ? err.message : String(err)
+  const lower = msg.toLowerCase()
+  if (lower.includes("account not found") || lower.includes("not found")) {
+    return "La cuenta destino no existe en Stellar. Necesita ser fondeada primero."
+  }
+  if (lower.includes("insufficient") || lower.includes("balance")) {
+    return "Balance HDROP insuficiente."
+  }
+  if (lower.includes("auth") || lower.includes("unauthorized") || lower.includes("permission")) {
+    return "No tenés permisos para esta operación."
+  }
+  return msg
+}
 
 export function useEnergyToken() {
   const { address, kit } = useWallet()
@@ -141,10 +154,10 @@ export function useEnergyToken() {
 
       throw new Error("Transaction failed")
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+      const errorMessage = translateStellarError(err)
       setError(errorMessage)
       console.error("Error transferring tokens:", err)
-      throw err
+      throw new Error(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -260,10 +273,10 @@ export function useEnergyToken() {
 
       throw new Error("Transaction failed")
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : "Unknown error"
+      const errorMessage = translateStellarError(err)
       setError(errorMessage)
       console.error("Error minting tokens:", err)
-      throw err
+      throw new Error(errorMessage)
     } finally {
       setIsLoading(false)
     }

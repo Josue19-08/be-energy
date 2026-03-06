@@ -8,8 +8,9 @@ import { Sidebar } from "@/components/sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { BalanceDisplay } from "@/components/balance-display"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { User, Copy, Check, RefreshCw, ArrowDownLeft, ArrowUpRight, Users, Zap, TrendingUp, AlertCircle } from "lucide-react"
+import { User, Copy, Check, RefreshCw, ArrowDownLeft, ArrowUpRight, Users, Zap, TrendingUp, AlertCircle, AlertTriangle } from "lucide-react"
 import { useEnergyToken } from "@/hooks/useEnergyToken"
+import { useAccountSetup } from "@/hooks/useAccountSetup"
 import { useDefindex } from "@/hooks/useDefindex"
 import { useHorizonPayments } from "@/hooks/useHorizonPayments"
 import { useEnergyDistribution } from "@/hooks/useEnergyDistribution"
@@ -34,6 +35,7 @@ export default function DashboardPage() {
   const { t } = useI18n()
   const router = useRouter()
   const { getBalance, isLoading: isBalanceLoading, error: balanceError } = useEnergyToken()
+  const { accountExists, isLoading: accountLoading, isFunding, error: fundError, isTestnet, fundAccount } = useAccountSetup()
   const [hdropBalance, setHdropBalance] = useState<number | null>(null)
 
   // Real data hooks
@@ -197,6 +199,43 @@ export default function DashboardPage() {
                     </div>
                   </div>
                 </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Account activation banner */}
+          {!accountLoading && accountExists === false && (
+            <Card className="mb-4 md:mb-6 border-2 border-yellow-500/30 bg-yellow-500/5">
+              <CardContent className="p-4 flex items-center gap-3">
+                <AlertTriangle className="w-5 h-5 text-yellow-600 shrink-0" />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-yellow-800 dark:text-yellow-200">
+                    {isTestnet
+                      ? "Tu cuenta no está activada en Stellar Testnet"
+                      : "Tu cuenta necesita XLM para operar en Stellar"}
+                  </p>
+                  {fundError && (
+                    <p className="text-xs text-destructive mt-1">{fundError}</p>
+                  )}
+                </div>
+                {isTestnet && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    className="shrink-0 border-yellow-500/50 text-yellow-700 dark:text-yellow-300 hover:bg-yellow-500/10"
+                    onClick={fundAccount}
+                    disabled={isFunding}
+                  >
+                    {isFunding ? (
+                      <>
+                        <Spinner className="size-4 mr-1" />
+                        Activando…
+                      </>
+                    ) : (
+                      "Activar cuenta (Friendbot)"
+                    )}
+                  </Button>
+                )}
               </CardContent>
             </Card>
           )}
