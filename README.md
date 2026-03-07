@@ -8,20 +8,21 @@
 [![DoraHacks](https://img.shields.io/badge/DoraHacks-Featured-orange)](https://dorahacks.io/buidl/36793)
 [![License](https://img.shields.io/badge/license-Apache%202.0-blue)](LICENSE)
 
-BeEnergy tokenizes renewable energy production as verifiable environmental certificates on Stellar. Cooperatives generate solar energy, BeEnergy issues proto-certificates on-chain, and external buyers (companies, ESG funds, climate programs) purchase and retire them.
+BeEnergy is a cooperative management dashboard + on-chain certification infrastructure for renewable energy on Stellar. Cooperatives use the dashboard to manage members, meters, readings, and statistics — and BeEnergy tokenizes their production as proto-certificates sold to external buyers (companies, ESG funds, climate programs).
 
 ---
 
 ## What it does
 
-Cooperatives and community solar installations generate renewable energy. BeEnergy measures that production and issues tokens that represent the environmental attribute of that generation — not the electricity itself.
+Two things:
+
+1. **Cooperative management dashboard** — Web panel where cooperatives register members, meters, load readings, view generation statistics, and manage certificates.
+2. **On-chain certification** — Tokenizes renewable production as proto-certificates on Stellar (1 token = 1 kWh), sold to external buyers.
 
 ```
-Cooperative generates solar energy
+Cooperative loads readings via dashboard
         |
-Production is measured (meter / backend)
-        |
-BeEnergy mints tokens (1 token = 1 kWh generated)
+BeEnergy mints proto-certificates on-chain (1 token = 1 kWh)
         |
 External buyer purchases certificates
         |
@@ -125,7 +126,7 @@ cargo test
 | Frontend | Next.js 16 + React 19 + TypeScript |
 | Styling | Tailwind CSS v4 + shadcn/ui |
 | Wallet | Freighter + Stellar Wallets Kit |
-| Backend | Supabase |
+| Backend | Next.js API Routes + Supabase |
 | Deployment | Vercel |
 | Monorepo | Turborepo + pnpm |
 
