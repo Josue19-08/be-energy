@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Sidebar } from "@/components/sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
-import { generateIdenticon } from "@/lib/mock-data"
+import { generateIdenticon } from "@/lib/utils"
 import { User, Camera, Save, ArrowLeft } from "lucide-react"
 
 export default function ProfilePage() {

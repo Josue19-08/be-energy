@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter } from "next/navigation"
 import { useI18n } from "@/lib/i18n-context"
-import { Home, Store, History, LogOut, Leaf, Zap } from "lucide-react"
+import { Home, History, LogOut, Leaf, Zap } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useWallet } from "@/lib/wallet-context"
 import { cn } from "@/lib/utils"
@@ -20,7 +20,6 @@ export function Sidebar() {
 
   const menuItems = [
     { icon: Home, label: t("sidebar.dashboard"), href: "/dashboard", enabled: true },
-    { icon: Store, label: t("sidebar.marketplace"), href: "/marketplace", enabled: true },
     { icon: History, label: t("sidebar.activity"), href: "/activity", enabled: true },
     { icon: Zap, label: t("sidebar.consumption"), href: "/consumption", enabled: true },
   ]

@@ -9,30 +9,34 @@
 ```
 ┌──────────────┐
 │  Medidor     │  Hardware del usuario-generador
-│  bidireccional│  Registra kWh inyectados a la red
+│  inteligente │  Registra kWh generados
 └──────┬───────┘
-       │ dato de lectura (kWh, fecha, medidor_id)
+       │ dato de lectura (kWh, timestamp, meter_id)
        │
-       │ Fase 1: carga manual / CSV
-       │ Fase 2: integración automática (ver abajo)
+       │ Fase 1: cooperativa carga dato manualmente al dashboard
+       │ Fase 2: medidor inteligente envía automáticamente vía API
        ▼
 ┌──────────────┐
-│  Cooperativa │  Admin humano con acceso al dashboard
-│  (admin)     │  Valida que la lectura sea correcta
+│  Cooperativa │  Admin con acceso al dashboard
+│  (admin)     │  Valida y gestiona la operación
 └──────┬───────┘
-       │ POST /api/readings  →  POST /api/validate
+       │ POST /api/readings  →  POST /api/mint
        ▼
 ┌──────────────────────────────────────────────────┐
 │  Backend BeEnergy (Next.js API Routes)           │
 │                                                  │
+│  /api/cooperatives  → Supabase (gestión coops)   │
+│  /api/members       → Supabase (miembros)        │
+│  /api/meters        → Supabase (medidores)       │
 │  /api/readings      → Supabase (INSERT lectura)  │
-│  /api/validate      → Supabase (UPDATE estado)   │
-│                       + Soroban (mint_energy)     │
-│  /api/apply-credit  → Soroban (burn_energy)      │
-│                       + Supabase (UPDATE factura) │
-│  /api/balance       → Soroban (balance query)    │
+│  /api/meters/readings → Bulk ingestion           │
+│  /api/mint          → Soroban (mint_energy)      │
+│  /api/certificates  → Supabase (proto-certs)     │
+│  /api/certificates/retire → Soroban (burn)       │
+│  /api/certificates/stats  → Estadísticas         │
 │                                                  │
-│  Supabase: lecturas, usuarios, logs              │
+│  Supabase: cooperativas, medidores, lecturas,    │
+│            certificados, retiros, logs           │
 │  Soroban RPC: transacciones on-chain             │
 └──────────────────┬───────────────────────────────┘
                    │ simulateTransaction → sendTransaction
@@ -42,6 +46,7 @@
 │                                                  │
 │  energy_token         mint / burn / balance      │
 │  energy_distribution  registro + distribución    │
+│  community_governance propuestas                 │
 │                                                  │
 │  Inmutable. Auditable. ~0.00001 XLM por tx.      │
 └──────────────────┬───────────────────────────────┘
@@ -50,8 +55,10 @@
 ┌──────────────────────────────────────────────────┐
 │  Dashboard (Next.js + React)                     │
 │                                                  │
-│  Vista cooperativa: lecturas, validación, totales│
-│  Vista usuario: generación, créditos, historial  │
+│  Vista cooperativa: medidores, lecturas,         │
+│    miembros, certificados, estadísticas          │
+│  Vista miembro: generación, certificados,        │
+│    historial                                     │
 │                                                  │
 │  Wallet: Freighter (SEP-43) para firmar txs      │
 │  El usuario no necesita saber qué es blockchain  │
@@ -81,7 +88,7 @@ Opción A: Inversor solar (API REST del fabricante)
                      └──────────────┬──────────────┘
                                     │
                                     ▼
-                          POST /api/readings
+                          POST /api/meters/readings
 
 Opción B: Medidor bidireccional (vía sistema HES de la cooperativa)
 ┌──────────────┐     ┌─────────────────────────────┐
@@ -98,15 +105,15 @@ Opción B: Medidor bidireccional (vía sistema HES de la cooperativa)
                      └──────────────┬──────────────┘
                                     │
                                     ▼
-                          POST /api/readings
+                          POST /api/meters/readings
 ```
 
 ### Qué cambia en BeEnergy para Fase 2
 
 | Componente | Fase 1 (hoy) | Fase 2 |
 |------------|-------------|--------|
-| Ingesta de datos | Manual / CSV | Webhook o polling desde API del inversor o HES |
-| `/api/readings` | Recibe JSON del admin | Recibe JSON del sistema de medición |
+| Ingesta de datos | Cooperativa carga manualmente al dashboard | Medidor envía automáticamente vía API |
+| Endpoint | `POST /api/readings` (individual) | `POST /api/meters/readings` (bulk, cada 15 min) |
 | Validación | Admin revisa y aprueba | Auto-validación con reglas + revisión por excepción |
 | Frecuencia | Cuando la cooperativa carga | Cada 15 min (medidor) o 1 min (inversor) |
 
@@ -123,7 +130,7 @@ No se necesita hardware nuevo. La cooperativa ya tiene medidores bidireccionales
 | Frontend | Next.js 16, React 19, Tailwind v4, shadcn/ui |
 | Wallet | Stellar Wallets Kit (Freighter, SEP-43) |
 | Backend | Next.js API Routes |
-| Base de datos | Supabase (lecturas, usuarios, logs) |
+| Base de datos | Supabase (cooperativas, medidores, lecturas, certificados, retiros) |
 | Deploy | Vercel (main branch) |
 
 ---
@@ -135,28 +142,35 @@ be-energy/
 ├── apps/
 │   ├── web/                          # Next.js 16 (@be-energy/web)
 │   │   ├── app/
-│   │   │   ├── dashboard/            # Dashboard cooperativa + usuario
+│   │   │   ├── dashboard/            # Dashboard cooperativa + miembro
 │   │   │   ├── admin/                # Panel admin cooperativa
 │   │   │   └── api/                  # API Routes
-│   │   │       ├── readings/         # Cargar lecturas
-│   │   │       ├── validate/         # Validar → mint
-│   │   │       ├── apply-credit/     # Aplicar a factura → burn
-│   │   │       └── balance/          # Consultar saldo
+│   │   │       ├── cooperatives/     # Gestión cooperativas
+│   │   │       ├── members/          # Gestión miembros
+│   │   │       ├── meters/           # Medidores + bulk readings
+│   │   │       ├── readings/         # Lecturas individuales
+│   │   │       ├── mint/             # Mint on-chain
+│   │   │       ├── certificates/     # Proto-certificados + retire + stats
+│   │   │       └── defindex/         # DeFindex yield (intacto)
 │   │   ├── components/ui/            # shadcn/ui
 │   │   ├── hooks/                    # Contract hooks
-│   │   ├── lib/                      # Contexts, config, supabase
-│   │   └── styles/                   # Tailwind v4
+│   │   ├── lib/                      # Contexts, config, supabase, types
+│   │   └── __tests__/                # Vitest API tests
 │   │
 │   └── contracts/                    # Soroban (Rust)
 │       ├── energy_token/             # Token SEP-41 por cooperativa
-│       ├── energy_distribution/      # Lecturas + distribución
+│       ├── energy_distribution/      # Distribución proporcional
 │       └── community_governance/     # Propuestas (WIP)
 │
 ├── packages/
 │   └── stellar/                      # Shared wallet & config
 │
+├── scripts/
+│   ├── setup-db.ts                   # Schema DB (migration-safe)
+│   ├── smart-meter-mock.ts           # Simulador de medidores
+│   └── simulate-testnet.ts           # Simulación testnet (legacy)
+│
 ├── docs/                             # Documentación
-├── scripts/                          # Simulación testnet
 └── vercel.json                       # Deploy config
 ```
 
@@ -180,7 +194,7 @@ be-energy/
              │
 ┌────────────┴────────────┐
 │  Energy Distribution     │
-│  Lecturas + distribución │
+│  Distribución + lecturas │
 └─────────────────────────┘
 
 ┌─────────────────────────┐
@@ -197,11 +211,17 @@ be-energy/
 
 | Route | Method | Descripción |
 |-------|--------|-------------|
-| `/api/readings` | POST | Cooperativa carga lectura de medidor |
-| `/api/validate` | POST | Admin valida lectura → mintea crédito on-chain |
-| `/api/apply-credit` | POST | Aplica crédito a factura → quema token |
-| `/api/balance/:address` | GET | Saldo de créditos de un usuario |
-| `/api/cooperatives` | GET/POST | Listar/registrar cooperativas (Fase 2) |
+| `/api/cooperatives` | GET, POST | Listar/registrar cooperativas |
+| `/api/members` | GET, POST | Listar/registrar miembros |
+| `/api/meters` | GET, POST | Listar/registrar medidores |
+| `/api/readings` | POST | Cargar lectura individual (legacy + nuevo) |
+| `/api/meters/readings` | POST | Ingesta bulk desde medidor |
+| `/api/mint` | POST | Mintear proto-certificado on-chain (lectura o certificado) |
+| `/api/certificates` | GET, POST | Listar/crear certificados |
+| `/api/certificates/[id]` | GET | Detalle con proveniencia + Stellar Expert link |
+| `/api/certificates/retire` | POST | Retirar certificado (burn on-chain) |
+| `/api/certificates/stats` | GET | Estadísticas de certificación |
+| `/api/prosumers` | GET, POST | Legacy proxy → members |
 
 ---
 

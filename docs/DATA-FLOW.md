@@ -6,7 +6,7 @@
 
 ## El producto en una oración
 
-**BeEnergy tokeniza la producción de energía renovable como proto-certificados verificables en Stellar, vendibles a compradores externos.**
+**BeEnergy es un dashboard de gestión cooperativa + infraestructura de certificación on-chain. Ofrece a las cooperativas un panel para administrar su operación y tokeniza la producción renovable como proto-certificados verificables en Stellar, vendibles a compradores externos.**
 
 ---
 
@@ -27,8 +27,8 @@
 │                                                                     │
 │   📊  MEDIDOR registra kWh generados                                │
 │                                                                     │
-│   Fase 1: la cooperativa carga el dato manual o por CSV             │
-│   Fase 2: el medidor inteligente lo envía automáticamente           │
+│   Fase 1: la cooperativa carga el dato manualmente al dashboard     │
+│   Fase 2: el medidor inteligente lo envía automáticamente vía API   │
 │                                                                     │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │

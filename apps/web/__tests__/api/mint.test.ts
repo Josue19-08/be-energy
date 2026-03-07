@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest"
 import { NextRequest } from "next/server"
 
-const { mockSingle, mockFrom } = vi.hoisted(() => {
+const { mockSingle, mockFrom, mockUpdate, mockInsert } = vi.hoisted(() => {
   const mockSingle = vi.fn()
   const mockEq: ReturnType<typeof vi.fn> = vi.fn(() => ({ single: mockSingle, eq: mockEq }))
   const mockUpdate = vi.fn(() => ({ eq: mockEq }))
@@ -11,7 +11,7 @@ const { mockSingle, mockFrom } = vi.hoisted(() => {
     update: mockUpdate,
     insert: mockInsert,
   }))
-  return { mockSingle, mockFrom }
+  return { mockSingle, mockFrom, mockUpdate, mockInsert }
 })
 
 vi.mock("@/lib/supabase", () => ({
@@ -50,8 +50,16 @@ describe("POST /api/mint", () => {
     process.env = { ...originalEnv }
   })
 
-  it("rechaza si reading_id no existe → 404", async () => {
+  it("rechaza sin reading_id ni certificate_id → 400", async () => {
+    const res = await POST(makeRequest({}))
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toMatch(/reading_id or certificate_id/)
+  })
+
+  it("rechaza si reading no existe → 404", async () => {
     mockSingle.mockResolvedValueOnce({ data: null, error: { message: "not found" } })
+    process.env.MINTER_SECRET_KEY = "SFAKE"
 
     const res = await POST(makeRequest({ reading_id: "nonexistent" }))
     expect(res.status).toBe(404)
@@ -60,11 +68,13 @@ describe("POST /api/mint", () => {
   })
 
   it("rechaza si la lectura ya fue minted → 400", async () => {
+    process.env.MINTER_SECRET_KEY = "SFAKE"
+
     mockSingle.mockResolvedValueOnce({
       data: {
         id: "r1",
         status: "minted",
-        kwh_injected: 5,
+        kwh_generated: 5,
         prosumers: { stellar_address: "GABC" },
       },
       error: null,
@@ -79,19 +89,28 @@ describe("POST /api/mint", () => {
   it("rechaza si MINTER_SECRET_KEY no está configurada → 500", async () => {
     delete process.env.MINTER_SECRET_KEY
 
-    mockSingle.mockResolvedValueOnce({
-      data: {
-        id: "r1",
-        status: "pending",
-        kwh_injected: 5,
-        prosumers: { stellar_address: "GABC" },
-      },
-      error: null,
-    })
-
     const res = await POST(makeRequest({ reading_id: "r1" }))
     expect(res.status).toBe(500)
     const json = await res.json()
     expect(json.error).toMatch(/MINTER_SECRET_KEY/)
+  })
+
+  it("rechaza certificate con status != pending → 400", async () => {
+    process.env.MINTER_SECRET_KEY = "SFAKE"
+
+    mockSingle.mockResolvedValueOnce({
+      data: {
+        id: "c1",
+        status: "available",
+        total_kwh: 100,
+        cooperatives: { admin_stellar_address: "GADMIN", token_contract_address: null },
+      },
+      error: null,
+    })
+
+    const res = await POST(makeRequest({ certificate_id: "c1" }))
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toMatch(/available/)
   })
 })

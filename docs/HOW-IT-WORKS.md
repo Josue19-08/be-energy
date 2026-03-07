@@ -1,6 +1,6 @@
 # BeEnergy — Cómo funciona
 
-BeEnergy es infraestructura de certificación energética on-chain. Tokeniza la producción de energía renovable como certificados ambientales verificables en Stellar.
+BeEnergy es un dashboard de gestión cooperativa + infraestructura de certificación energética on-chain. Ofrece a las cooperativas un panel para administrar su operación (miembros, medidores, lecturas, estadísticas) y tokeniza la producción de energía renovable como proto-certificados verificables en Stellar, vendibles a compradores externos.
 
 ## El problema
 
@@ -15,12 +15,16 @@ La generación distribuida crece en Argentina. Cooperativas y comunidades instal
 
 ## Qué hace BeEnergy
 
-BeEnergy mide la producción renovable de una cooperativa, emite proto-certificados on-chain (1 token = 1 kWh generado) y facilita su venta a compradores externos.
+BeEnergy ofrece dos cosas a las cooperativas:
+
+1. **Dashboard de gestión** — Panel web para administrar la cooperativa: registrar miembros, medidores, cargar lecturas, ver estadísticas de generación, gestionar certificados.
+2. **Certificación on-chain** — Tokeniza la producción renovable como proto-certificados verificables en Stellar (1 token = 1 kWh generado), vendibles a compradores externos.
 
 El token representa el **atributo ambiental** de la generación — no la electricidad física. Una empresa puede usar energía de red convencional pero comprar certificados para respaldar su operación como "renovable".
 
 | Sin BeEnergy | Con BeEnergy |
 |---|---|
+| Gestión manual en planillas | Dashboard web centralizado |
 | Generación sin registro verificable | Proto-certificados on-chain auditables |
 | Atributo ambiental no monetizado | Certificados vendibles a compradores externos |
 | Sin trazabilidad para ESG | Historial completo e inmutable en Stellar |
@@ -32,8 +36,8 @@ El token representa el **atributo ambiental** de la generación — no la electr
 
 La cooperativa o comunidad solar genera energía renovable. La producción se mide con medidores.
 
-- En el piloto: la cooperativa carga datos manualmente o por CSV.
-- En Fase 2: se integra con medidores inteligentes y el dato llega automáticamente.
+- En Fase 1 (piloto): la cooperativa carga las lecturas manualmente a través del dashboard.
+- En Fase 2: se integra con medidores inteligentes y el dato llega automáticamente vía API.
 
 ### 2. Se emiten los proto-certificados
 
@@ -116,7 +120,12 @@ Integración con I-REC, Energy Web, TIGR. Acceso al mercado global de RECs. El t
 
 ## Modelo de negocio
 
-BeEnergy cobra una comisión sobre la venta de certificados a compradores externos. Los ingresos de la venta benefician a la cooperativa y sus miembros.
+Dos fuentes de ingresos:
+
+1. **Suscripción SaaS** — por el dashboard de gestión cooperativa (planes Starter, Pro, Enterprise).
+2. **Comisión sobre venta de certificados** — porcentaje sobre cada proto-certificado vendido a compradores externos.
+
+Los ingresos de la venta de certificados benefician a la cooperativa y sus miembros.
 
 ## Lo que BeEnergy no es
 

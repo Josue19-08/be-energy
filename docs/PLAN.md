@@ -2,63 +2,73 @@
 
 ## Qué es
 
-SaaS para cooperativas eléctricas argentinas. Tokeniza la gestión de créditos de generación distribuida.
+Infraestructura de certificación energética y dashboard de gestión para cooperativas eléctricas argentinas. Tokeniza la producción de energía renovable como proto-certificados verificables en Stellar, vendibles a compradores externos.
 
 ## Cómo gana plata BeEnergy
 
-Suscripción SaaS mensual por cooperativa + fee de setup por onboarding.
+Dos fuentes de ingresos:
+
+1. **Suscripción SaaS** — por el dashboard de gestión cooperativa
+2. **Comisión sobre venta de certificados** — porcentaje sobre cada proto-certificado vendido a compradores externos
 
 | Plan | Incluye |
 |------|---------|
-| Starter | Hasta 50 usuarios-generadores, dashboard básico, 1 admin |
-| Pro | Hasta 500 usuarios-generadores, analytics, múltiples admins |
-| Enterprise | Ilimitado, API, integración con facturación, soporte dedicado |
+| Starter | Hasta 50 miembros, dashboard básico, 1 admin |
+| Pro | Hasta 500 miembros, analytics, múltiples admins |
+| Enterprise | Ilimitado, API, integración con medidores, soporte dedicado |
 
 ---
 
 ## Fase 1 — 1 cooperativa piloto
 
-**Objetivo:** Una cooperativa real gestiona créditos con BeEnergy en Testnet.
+**Objetivo:** Una cooperativa real gestiona su generación con BeEnergy en Testnet. Proto-certificados emitidos y verificables on-chain.
 
 **Contratos Soroban:**
-- `energy_token` — SEP-41 parametrizable (nombre, símbolo, cooperative_id). 1 token = 1 kWh
-- `energy_distribution` — Lecturas, validación, mint, burn. Sin módulo privacy
+- `energy_token` — SEP-41 parametrizable (nombre, símbolo, cooperative_id). 1 token = 1 kWh. Pausable + Upgradeable
+- `energy_distribution` — Distribución proporcional por miembro, multisig. Pausable + Upgradeable
+- `community_governance` — Propuestas (skeleton, votación WIP)
 
 **API:**
-- `POST /api/readings` — Carga lectura (manual o CSV)
-- `POST /api/validate` — Valida lectura → mintea crédito
-- `POST /api/apply-credit` — Aplica a factura → quema token
-- `GET /api/balance/:address` — Saldo de créditos
+- `POST /api/cooperatives` — Registrar cooperativa
+- `POST /api/members` — Registrar miembro de cooperativa
+- `POST /api/meters` — Registrar medidor
+- `POST /api/readings` — Cargar lectura (manual desde el dashboard)
+- `POST /api/meters/readings` — Ingesta bulk desde medidor
+- `POST /api/mint` — Validar lectura o certificado → mintear on-chain
+- `POST /api/certificates` — Crear proto-certificado
+- `POST /api/certificates/retire` — Retirar certificado (burn on-chain)
+- `GET /api/certificates/stats` — Estadísticas de certificación
 
-**Frontend:**
-- Dashboard cooperativa (admin): lecturas, validación, usuarios, totales
-- Dashboard usuario: generación, créditos, historial
+**Dashboard:**
+- Vista cooperativa (admin): medidores, lecturas, miembros, certificados, estadísticas
+- Vista miembro: generación personal, certificados, historial
 - Login con wallet Stellar
+
+**Ingesta de datos (Fase 1):**
+La cooperativa carga las lecturas manualmente a través del dashboard.
 
 **Flujo:**
 ```
-Medidor → Cooperativa carga dato → Valida → Mint token
-Usuario ve crédito → Cooperativa aplica a factura → Burn token
+Medidor registra kWh → Cooperativa carga dato al dashboard → Se valida →
+Se mintea proto-certificado on-chain → Comprador externo lo adquiere →
+Se retira el certificado (burn) → Evita doble conteo
 ```
 
 ---
 
-## Fase 2 — Multi-cooperativa
+## Fase 2 — Medidores inteligentes + multi-cooperativa
 
-**Objetivo:** Cualquier cooperativa se suma. Cada una tiene su propio token.
+**Objetivo:** Ingesta automática de datos. Cualquier cooperativa se suma.
 
 **Contratos nuevos:**
-- `cooperative_factory` — Despliega token + distribution en 1 tx
+- `cooperative_factory` — Despliega token + distribution + governance en 1 tx
 - `cooperative_registry` — Directorio de cooperativas y sus contratos
 
 **Cambios:**
-- Token recibe nombre/símbolo/cooperative_id en constructor
-- Distribution migra a `__constructor`, agrega `update_members`, `transfer_admin`
-
-**Frontend:**
-- Onboarding de cooperativa
-- Selector de cooperativa
-- Panel admin BeEnergy
+- Ingesta automática: medidores inteligentes envían datos vía API (smart meter mock disponible)
+- Auto-validación con reglas + revisión por excepción
+- Onboarding de cooperativa via dashboard
+- Selector de cooperativa en el frontend
 
 ---
 
@@ -90,6 +100,6 @@ Usuario ve crédito → Cooperativa aplica a factura → Burn token
 
 ## Marco legal
 
-- **Fase 1-3:** Legal bajo Ley 27.424 (intra-cooperativa)
+- **Fase 1-3:** Legal bajo Ley 27.424 (intra-cooperativa). El token es un proto-certificado operativo, no un activo especulativo
 - **Fase 4:** Requiere consulta legal (Decreto 450/25 abre camino)
-- **PSAV:** No aplica en Fase 1-3 (crédito operativo interno, no activo especulativo)
+- **PSAV:** No aplica en Fase 1-3
