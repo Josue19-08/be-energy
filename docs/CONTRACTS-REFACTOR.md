@@ -1,4 +1,4 @@
-# Contratos Soroban — Qué se queda y qué falta
+# 6. Contratos Soroban — Qué se queda y qué falta
 
 > BeEnergy v0.2.0 → v0.3.0
 > Objetivo: soporte multi-cooperativa

@@ -1,4 +1,4 @@
-# Soroban Contracts Reference
+# 5. Soroban Contracts Reference
 
 > BeEnergy v0.3.0
 

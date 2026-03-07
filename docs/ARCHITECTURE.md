@@ -1,4 +1,4 @@
-# BeEnergy — Arquitectura
+# 4. BeEnergy — Arquitectura
 
 > v0.3.0 · Modelo cooperativo · Stellar Testnet
 
@@ -13,7 +13,7 @@
 └──────┬───────┘
        │ dato de lectura (kWh, timestamp, meter_id)
        │
-       │ Fase 1: cooperativa carga dato manualmente al dashboard
+       │ Medidor inteligente envía lecturas vía API
        │ Fase 2: medidor inteligente envía automáticamente vía API
        ▼
 ┌──────────────┐
@@ -112,10 +112,10 @@ Opción B: Medidor bidireccional (vía sistema HES de la cooperativa)
 
 | Componente | Fase 1 (hoy) | Fase 2 |
 |------------|-------------|--------|
-| Ingesta de datos | Cooperativa carga manualmente al dashboard | Medidor envía automáticamente vía API |
-| Endpoint | `POST /api/readings` (individual) | `POST /api/meters/readings` (bulk, cada 15 min) |
+| Ingesta de datos | Smart meter mock envía datos vía API | Integración directa con HES/MDM e inversores |
+| Endpoint | `POST /api/meters/readings` (bulk) | Mismo endpoint, múltiples fuentes |
 | Validación | Admin revisa y aprueba | Auto-validación con reglas + revisión por excepción |
-| Frecuencia | Cuando la cooperativa carga | Cada 15 min (medidor) o 1 min (inversor) |
+| Frecuencia | Cada 15 min (mock) | Cada 15 min (medidor) o 1 min (inversor) |
 
 No se necesita hardware nuevo. La cooperativa ya tiene medidores bidireccionales (obligatorios para generación distribuida) y muchas ya tienen lectura remota.
 

@@ -1,4 +1,4 @@
-# BeEnergy — Data Flow
+# 3. BeEnergy — Data Flow
 
 > Cuando te pierdas con el producto, volvé acá.
 
@@ -27,8 +27,8 @@
 │                                                                     │
 │   📊  MEDIDOR registra kWh generados                                │
 │                                                                     │
-│   Fase 1: la cooperativa carga el dato manualmente al dashboard     │
-│   Fase 2: el medidor inteligente lo envía automáticamente vía API   │
+│   El medidor inteligente envía lecturas automáticamente vía API     │
+│   (POST /api/meters/readings — bulk cada 15 min)                   │
 │                                                                     │
 └──────────────────────────┬──────────────────────────────────────────┘
                            │

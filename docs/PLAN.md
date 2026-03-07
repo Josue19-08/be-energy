@@ -1,4 +1,4 @@
-# BeEnergy — Plan de Producto
+# 1. BeEnergy — Plan de Producto
 
 ## Qué es
 
@@ -32,7 +32,7 @@ Dos fuentes de ingresos:
 - `POST /api/cooperatives` — Registrar cooperativa
 - `POST /api/members` — Registrar miembro de cooperativa
 - `POST /api/meters` — Registrar medidor
-- `POST /api/readings` — Cargar lectura (manual desde el dashboard)
+- `POST /api/readings` — Cargar lectura individual
 - `POST /api/meters/readings` — Ingesta bulk desde medidor
 - `POST /api/mint` — Validar lectura o certificado → mintear on-chain
 - `POST /api/certificates` — Crear proto-certificado
@@ -45,11 +45,11 @@ Dos fuentes de ingresos:
 - Login con wallet Stellar
 
 **Ingesta de datos (Fase 1):**
-La cooperativa carga las lecturas manualmente a través del dashboard.
+El medidor inteligente envía lecturas automáticamente vía API (`POST /api/meters/readings`). Se incluye un smart meter mock que simula datos realistas con curva solar.
 
 **Flujo:**
 ```
-Medidor registra kWh → Cooperativa carga dato al dashboard → Se valida →
+Medidor inteligente registra kWh → Envía datos vía API → Se valida →
 Se mintea proto-certificado on-chain → Comprador externo lo adquiere →
 Se retira el certificado (burn) → Evita doble conteo
 ```

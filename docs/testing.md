@@ -1,4 +1,4 @@
-# Testing — BeEnergy
+# 8. Testing — BeEnergy
 
 Última actualización: **2026-03-07**
 Red: **Stellar Testnet**
@@ -81,7 +81,7 @@ COOPERATIVE_ID=<uuid> pnpm meter:mock
    POST /api/meters
    { cooperative_id, member_stellar_address, device_type, technology, capacity_kw }
 
-4. Cargar lecturas (manual desde dashboard o bulk desde medidor)
+4. Cargar lecturas (medidor inteligente envía vía API)
    POST /api/readings                → lectura individual
    POST /api/meters/readings          → ingesta bulk
 

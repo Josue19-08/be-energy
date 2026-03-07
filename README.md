@@ -16,11 +16,11 @@ BeEnergy is a cooperative management dashboard + on-chain certification infrastr
 
 Two things:
 
-1. **Cooperative management dashboard** — Web panel where cooperatives register members, meters, load readings, view generation statistics, and manage certificates.
+1. **Cooperative management dashboard** — Web panel where cooperatives manage members, meters, generation statistics, and certificates.
 2. **On-chain certification** — Tokenizes renewable production as proto-certificates on Stellar (1 token = 1 kWh), sold to external buyers.
 
 ```
-Cooperative loads readings via dashboard
+Smart meter sends readings via API (POST /api/meters/readings)
         |
 BeEnergy mints proto-certificates on-chain (1 token = 1 kWh)
         |

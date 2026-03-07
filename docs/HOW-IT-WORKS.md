@@ -1,4 +1,4 @@
-# BeEnergy — Cómo funciona
+# 2. BeEnergy — Cómo funciona
 
 BeEnergy es un dashboard de gestión cooperativa + infraestructura de certificación energética on-chain. Ofrece a las cooperativas un panel para administrar su operación (miembros, medidores, lecturas, estadísticas) y tokeniza la producción de energía renovable como proto-certificados verificables en Stellar, vendibles a compradores externos.
 
@@ -17,7 +17,7 @@ La generación distribuida crece en Argentina. Cooperativas y comunidades instal
 
 BeEnergy ofrece dos cosas a las cooperativas:
 
-1. **Dashboard de gestión** — Panel web para administrar la cooperativa: registrar miembros, medidores, cargar lecturas, ver estadísticas de generación, gestionar certificados.
+1. **Dashboard de gestión** — Panel web para administrar la cooperativa: registrar miembros, medidores, ver lecturas y estadísticas de generación, gestionar certificados.
 2. **Certificación on-chain** — Tokeniza la producción renovable como proto-certificados verificables en Stellar (1 token = 1 kWh generado), vendibles a compradores externos.
 
 El token representa el **atributo ambiental** de la generación — no la electricidad física. Una empresa puede usar energía de red convencional pero comprar certificados para respaldar su operación como "renovable".
@@ -36,8 +36,8 @@ El token representa el **atributo ambiental** de la generación — no la electr
 
 La cooperativa o comunidad solar genera energía renovable. La producción se mide con medidores.
 
-- En Fase 1 (piloto): la cooperativa carga las lecturas manualmente a través del dashboard.
-- En Fase 2: se integra con medidores inteligentes y el dato llega automáticamente vía API.
+- En Fase 1 (piloto): el medidor inteligente envía las lecturas automáticamente vía API. Se incluye un smart meter mock que simula datos realistas.
+- En Fase 2: integración directa con medidores de la cooperativa (HES/MDM) e inversores solares (Fronius, Huawei, SMA).
 
 ### 2. Se emiten los proto-certificados
 
