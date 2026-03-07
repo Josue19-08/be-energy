@@ -2,7 +2,7 @@
 
 import { useState } from "react"
 import { usePathname, useRouter } from "next/navigation"
-import { Home, Store, History, Settings, LogOut, Leaf, Menu } from "lucide-react"
+import { Home, History, Settings, LogOut, Leaf, Menu } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { useWallet } from "@/lib/wallet-context"
 import { cn } from "@/lib/utils"
@@ -22,7 +22,6 @@ export function MobileSidebar() {
 
   const menuItems = [
     { icon: Home, label: "Dashboard", href: "/dashboard", enabled: true },
-    { icon: Store, label: "Marketplace", href: "/marketplace", enabled: true },
     { icon: History, label: "Historial", href: "/historial", enabled: false },
     { icon: Settings, label: "Configuración", href: "/config", enabled: false },
   ]

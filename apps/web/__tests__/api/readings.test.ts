@@ -31,36 +31,43 @@ describe("POST /api/readings", () => {
     vi.clearAllMocks()
   })
 
-  it("rechaza lectura sin stellar_address → 400", async () => {
-    const res = await POST(makeRequest({ kwh_injected: 5, reading_date: "2025-01-01" }))
+  it("rechaza lectura sin stellar_address ni meter_id → 400", async () => {
+    const res = await POST(makeRequest({ kwh_generated: 5, reading_date: "2025-01-01" }))
     expect(res.status).toBe(400)
     const json = await res.json()
-    expect(json.error).toMatch(/Missing required fields/)
+    expect(json.error).toMatch(/stellar_address or meter_id/)
   })
 
-  it("rechaza lectura con kwh_injected <= 0 → 400", async () => {
+  it("rechaza lectura con kwh_generated <= 0 → 400", async () => {
     const res = await POST(
-      makeRequest({ stellar_address: "GABC", kwh_injected: 0, reading_date: "2025-01-01" })
+      makeRequest({ stellar_address: "GABC", kwh_generated: 0, reading_date: "2025-01-01" })
     )
     expect(res.status).toBe(400)
     const json = await res.json()
-    expect(json.error).toMatch(/kwh_injected/)
+    expect(json.error).toMatch(/kwh_generated/)
   })
 
-  it("rechaza lectura con kwh_injected >= 100 → 400", async () => {
+  it("rechaza lectura con kwh_generated >= 1000 → 400", async () => {
     const res = await POST(
-      makeRequest({ stellar_address: "GABC", kwh_injected: 100, reading_date: "2025-01-01" })
+      makeRequest({ stellar_address: "GABC", kwh_generated: 1000, reading_date: "2025-01-01" })
     )
     expect(res.status).toBe(400)
     const json = await res.json()
-    expect(json.error).toMatch(/kwh_injected/)
+    expect(json.error).toMatch(/kwh_generated/)
+  })
+
+  it("acepta kwh_injected como alias legacy → 400 si invalido", async () => {
+    const res = await POST(
+      makeRequest({ stellar_address: "GABC", kwh_injected: -1, reading_date: "2025-01-01" })
+    )
+    expect(res.status).toBe(400)
   })
 
   it("rechaza lectura de prosumidor que no existe → 404", async () => {
     mockSingle.mockResolvedValueOnce({ data: null, error: { message: "not found" } })
 
     const res = await POST(
-      makeRequest({ stellar_address: "GABC", kwh_injected: 5, reading_date: "2025-01-01" })
+      makeRequest({ stellar_address: "GABC", kwh_generated: 5, reading_date: "2025-01-01" })
     )
     expect(res.status).toBe(404)
     const json = await res.json()
@@ -68,11 +75,11 @@ describe("POST /api/readings", () => {
   })
 
   it("rechaza lectura duplicada → 409", async () => {
-    mockSingle.mockResolvedValueOnce({ data: { id: "uuid-1" }, error: null })
+    mockSingle.mockResolvedValueOnce({ data: { id: "uuid-1", cooperative_id: null }, error: null })
     mockSingle.mockResolvedValueOnce({ data: { id: "existing-reading" }, error: null })
 
     const res = await POST(
-      makeRequest({ stellar_address: "GABC", kwh_injected: 5, reading_date: "2025-01-01" })
+      makeRequest({ stellar_address: "GABC", kwh_generated: 5, reading_date: "2025-01-01" })
     )
     expect(res.status).toBe(409)
     const json = await res.json()
@@ -83,16 +90,16 @@ describe("POST /api/readings", () => {
     const fakeReading = {
       id: "reading-1",
       prosumer_id: "uuid-1",
-      kwh_injected: 5,
+      kwh_generated: 5,
       reading_date: "2025-01-01",
       status: "pending",
     }
-    mockSingle.mockResolvedValueOnce({ data: { id: "uuid-1" }, error: null })
+    mockSingle.mockResolvedValueOnce({ data: { id: "uuid-1", cooperative_id: null }, error: null })
     mockSingle.mockResolvedValueOnce({ data: null, error: null })
     mockSingle.mockResolvedValueOnce({ data: fakeReading, error: null })
 
     const res = await POST(
-      makeRequest({ stellar_address: "GABC", kwh_injected: 5, reading_date: "2025-01-01" })
+      makeRequest({ stellar_address: "GABC", kwh_generated: 5, reading_date: "2025-01-01" })
     )
     expect(res.status).toBe(201)
     const json = await res.json()

@@ -8,7 +8,9 @@
     "build": "turbo build",
     "lint": "turbo lint",
     "format": "prettier --write \"**/*.{ts,tsx,md}\"",
-    "simulate": "npx tsx scripts/simulate-testnet.ts"
+    "simulate": "npx tsx scripts/simulate-testnet.ts",
+    "meter:mock": "npx tsx scripts/smart-meter-mock.ts --continuous",
+    "meter:mock:backfill": "npx tsx scripts/smart-meter-mock.ts --backfill"
   },
   "devDependencies": {
     "prettier": "^3.5.3",

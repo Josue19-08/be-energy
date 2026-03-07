@@ -2,7 +2,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { useWallet } from "@/lib/wallet-context"
-import { generateIdenticon } from "@/lib/mock-data"
+import { generateIdenticon } from "@/lib/utils"
 import { MobileSidebar } from "@/components/mobile-sidebar"
 import { ThemeToggle } from "@/components/theme-toggle"
 import { LanguageSelector } from "@/components/language-selector"

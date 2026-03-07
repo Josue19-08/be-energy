@@ -5,7 +5,7 @@
  */
 
 export const CONTRACTS = {
-  // Token contract (HoneyDrop - HDROP)
+  // Energy token contract
   ENERGY_TOKEN: process.env.NEXT_PUBLIC_ENERGY_TOKEN_CONTRACT || "",
 
   // Distribution contract
