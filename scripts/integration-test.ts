@@ -68,11 +68,20 @@ async function mintOnChain(toAddress: string, amountKwh: number): Promise<string
     .setTimeout(30)
     .build()
 
-  const prepared = await server.prepareTransaction(tx)
+  let prepared: StellarSdk.Transaction
+  try {
+    prepared = await server.prepareTransaction(tx) as StellarSdk.Transaction
+  } catch (e: any) {
+    console.error("  ⚠️  Mint prepareTransaction error:", e?.message || e)
+    throw e
+  }
   prepared.sign(minterKeypair)
 
   const sendResult = await server.sendTransaction(prepared)
-  if (sendResult.status === "ERROR") throw new Error("Mint tx failed to submit")
+  if (sendResult.status === "ERROR") {
+    console.error("  ⚠️  Mint sendTransaction error:", JSON.stringify(sendResult, null, 2))
+    throw new Error("Mint tx failed to submit")
+  }
 
   let response = await server.getTransaction(sendResult.hash)
   while (response.status === "NOT_FOUND") {
@@ -80,7 +89,10 @@ async function mintOnChain(toAddress: string, amountKwh: number): Promise<string
     response = await server.getTransaction(sendResult.hash)
   }
 
-  if (response.status !== "SUCCESS") throw new Error(`Mint tx failed: ${response.status}`)
+  if (response.status !== "SUCCESS") {
+    console.error("  ⚠️  Mint tx failed on-chain:", JSON.stringify(response, null, 2))
+    throw new Error(`Mint tx failed: ${response.status}`)
+  }
   return sendResult.hash
 }
 
@@ -107,11 +119,20 @@ async function burnOnChain(amountKwh: number): Promise<string> {
     .setTimeout(30)
     .build()
 
-  const prepared = await server.prepareTransaction(tx)
+  let prepared: StellarSdk.Transaction
+  try {
+    prepared = await server.prepareTransaction(tx) as StellarSdk.Transaction
+  } catch (e: any) {
+    console.error("  ⚠️  Burn prepareTransaction error:", e?.message || e)
+    throw e
+  }
   prepared.sign(minterKeypair)
 
   const sendResult = await server.sendTransaction(prepared)
-  if (sendResult.status === "ERROR") throw new Error("Burn tx failed to submit")
+  if (sendResult.status === "ERROR") {
+    console.error("  ⚠️  Burn sendTransaction error:", JSON.stringify(sendResult, null, 2))
+    throw new Error("Burn tx failed to submit")
+  }
 
   let response = await server.getTransaction(sendResult.hash)
   while (response.status === "NOT_FOUND") {
@@ -119,7 +140,10 @@ async function burnOnChain(amountKwh: number): Promise<string> {
     response = await server.getTransaction(sendResult.hash)
   }
 
-  if (response.status !== "SUCCESS") throw new Error(`Burn tx failed: ${response.status}`)
+  if (response.status !== "SUCCESS") {
+    console.error("  ⚠️  Burn tx failed on-chain:", JSON.stringify(response, null, 2))
+    throw new Error(`Burn tx failed: ${response.status}`)
+  }
   return sendResult.hash
 }
 
