@@ -82,12 +82,14 @@ export async function POST(req: NextRequest) {
 
     const minterSecret = process.env.MINTER_SECRET_KEY
     if (!minterSecret) {
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+      console.error("[MINT] MINTER_SECRET_KEY not configured")
+      return NextResponse.json({ error: "Server configuration error: missing minter key" }, { status: 500 })
     }
 
     const contractAddress = CONTRACTS.ENERGY_TOKEN
     if (!contractAddress) {
-      return NextResponse.json({ error: "Server configuration error" }, { status: 500 })
+      console.error("[MINT] ENERGY_TOKEN contract not configured")
+      return NextResponse.json({ error: "Server configuration error: missing contract" }, { status: 500 })
     }
 
     // --- Certificate flow ---
@@ -192,6 +194,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     const message = error instanceof Error ? error.message : "Unknown error"
+    console.error("[MINT ERROR]", message, error instanceof Error ? error.stack : error)
     if (readingId) {
       return markFailed(readingId, message)
     }
