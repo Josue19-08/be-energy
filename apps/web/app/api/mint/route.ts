@@ -198,7 +198,7 @@ export async function POST(req: NextRequest) {
     if (readingId) {
       return markFailed(readingId, message)
     }
-    // Temporarily expose error for debugging (remove in production)
+    // Expose error details for debugging
     return NextResponse.json({ error: message }, { status: 500 })
   }
 }
