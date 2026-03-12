@@ -4,7 +4,7 @@ import {
   ISupportedWallet,
   StellarWalletsKit,
   WalletNetwork,
-  sep43Modules,
+  allowAllModules,
 } from "@creit.tech/stellar-wallets-kit";
 import { Horizon } from "@stellar/stellar-sdk";
 import { storage } from "./storage"
@@ -21,7 +21,7 @@ function getKit(): StellarWalletsKit {
   if (!kitInstance) {
     kitInstance = new StellarWalletsKit({
       network: networkPassphrase as WalletNetwork,
-      modules: sep43Modules(),
+      modules: allowAllModules(),
     });
   }
 
@@ -60,16 +60,15 @@ export const connectWallet = async (): Promise<ConnectResult | null> => {
         storage.setItem("walletAddress", addrResult.address);
 
         let networkStr = "";
-        if (selectedId === "freighter" || selectedId === "hot-wallet") {
-          try {
-            const netResult = await kit.getNetwork();
-            networkStr = netResult.network || "";
-            storage.setItem("walletNetwork", networkStr);
-            storage.setItem("networkPassphrase", netResult.networkPassphrase || "");
-          } catch {
-            storage.setItem("walletNetwork", "");
-            storage.setItem("networkPassphrase", "");
-          }
+        try {
+          const netResult = await kit.getNetwork();
+          networkStr = netResult.network || "";
+          storage.setItem("walletNetwork", networkStr);
+          storage.setItem("networkPassphrase", netResult.networkPassphrase || "");
+        } catch {
+          // Wallet doesn't support getNetwork — use configured defaults
+          storage.setItem("walletNetwork", stellarNetwork);
+          storage.setItem("networkPassphrase", networkPassphrase);
         }
 
         resolveResult({ address: addrResult.address, network: networkStr });

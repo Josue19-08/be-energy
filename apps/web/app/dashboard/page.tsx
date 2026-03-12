@@ -141,9 +141,18 @@ export default function DashboardPage() {
     if (!address) return
     try {
       await navigator.clipboard.writeText(address)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    } catch (err) {console.error("Failed to copy:", err)}
+    } catch {
+      const ta = document.createElement("textarea")
+      ta.value = address
+      ta.style.position = "fixed"
+      ta.style.opacity = "0"
+      document.body.appendChild(ta)
+      ta.select()
+      document.execCommand("copy")
+      document.body.removeChild(ta)
+    }
+    setCopied(true)
+    setTimeout(() => setCopied(false), 2000)
   }
 
   if (!isConnected) {
