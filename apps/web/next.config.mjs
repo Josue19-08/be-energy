@@ -47,7 +47,7 @@ const nextConfig = {
               "script-src 'self' 'unsafe-inline' 'unsafe-eval'",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              "img-src 'self' data: blob: https://stellar.creit.tech https://storage.herowallet.app https://*.lobstr.co https://*.albedo.link",
+              "img-src 'self' data: blob: https://stellar.creit.tech https://storage.herewallet.app https://*.lobstr.co https://*.albedo.link",
               "connect-src 'self' https://soroban-testnet.stellar.org https://horizon-testnet.stellar.org https://*.supabase.co wss://*.supabase.co https://api.defindex.tech https://stellar.creit.tech https://*.walletconnect.com wss://*.walletconnect.com",
               "frame-src 'self' https://*.albedo.link https://*.xbull.app https://*.lobstr.co",
               "frame-ancestors 'none'",

@@ -31,6 +31,8 @@ const translations = {
     // Dashboard
     "dashboard.welcome": "Bienvenido,",
     "dashboard.balance": "Balance",
+    "dashboard.myGeneration": "Mi Generación",
+    "dashboard.noGeneration": "Aún no hay lecturas de generación registradas",
     "dashboard.availableKwh": "kWh Disponibles",
     "dashboard.consumption": "Consumo Noviembre",
     "dashboard.last7days": "Últimos 7 días",
@@ -41,6 +43,8 @@ const translations = {
     "dashboard.viewAll": "Ver todo",
     "dashboard.swap": "Swap → XLM",
     "dashboard.certificationStats": "Estadísticas de Certificación",
+    "dashboard.platformImpact": "Impacto BeEnergy",
+    "dashboard.platformImpactDesc": "Datos globales de energía renovable certificada en la plataforma",
 
     // Certificates
     "certificates.title": "Certificados de Energía",
@@ -113,7 +117,7 @@ const translations = {
     "sidebar.dashboard": "Dashboard",
     "sidebar.certificates": "Certificados",
     "sidebar.activity": "Actividad Reciente",
-    "sidebar.consumption": "Historial de Consumo",
+    "sidebar.consumption": "Historial de Generación",
     "sidebar.settings": "Configuración",
     "sidebar.disconnect": "Desconectar",
     "sidebar.cooperative": "Mi Cooperativa",
@@ -329,6 +333,8 @@ const translations = {
     // Dashboard
     "dashboard.welcome": "Welcome,",
     "dashboard.balance": "Balance",
+    "dashboard.myGeneration": "My Generation",
+    "dashboard.noGeneration": "No generation readings registered yet",
     "dashboard.availableKwh": "Available kWh",
     "dashboard.consumption": "November Consumption",
     "dashboard.last7days": "Last 7 days",
@@ -339,6 +345,8 @@ const translations = {
     "dashboard.viewAll": "View all",
     "dashboard.swap": "Swap → XLM",
     "dashboard.certificationStats": "Certification Stats",
+    "dashboard.platformImpact": "BeEnergy Impact",
+    "dashboard.platformImpactDesc": "Global renewable energy data certified on the platform",
 
     // Certificates
     "certificates.title": "Energy Certificates",
@@ -411,7 +419,7 @@ const translations = {
     "sidebar.dashboard": "Dashboard",
     "sidebar.certificates": "Certificates",
     "sidebar.activity": "Recent Activity",
-    "sidebar.consumption": "Consumption History",
+    "sidebar.consumption": "Generation History",
     "sidebar.settings": "Settings",
     "sidebar.disconnect": "Disconnect",
     "sidebar.cooperative": "My Cooperative",

@@ -14,7 +14,11 @@ export interface HorizonPayment {
   from?: string
   to?: string
   amount?: string
-  // For account_merge, path_payment, etc.
+  // For create_account operations (e.g. Friendbot funding)
+  funder?: string
+  account?: string
+  starting_balance?: string
+  // For path_payment, etc.
   source_amount?: string
   source_asset_code?: string
 }
