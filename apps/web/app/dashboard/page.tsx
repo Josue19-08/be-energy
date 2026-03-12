@@ -1,6 +1,6 @@
 "use client"
 
-import { useCallback, useEffect, useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useWallet } from "@/lib/wallet-context"
 import { useI18n } from "@/lib/i18n-context"
@@ -11,7 +11,6 @@ import { User, Copy, Check, RefreshCw, ArrowDownLeft, ArrowUpRight, Users, Zap, 
 import { InfoTooltip } from "@/components/shared/info-tooltip"
 import { useAuth } from "@/lib/auth-context"
 import { RegisterCooperativeModal } from "@/components/modals/register-cooperative-modal"
-import { useEnergyToken } from "@/hooks/useEnergyToken"
 import { useAccountSetup } from "@/hooks/useAccountSetup"
 import { useHorizonPayments } from "@/hooks/useHorizonPayments"
 import { useEnergyDistribution } from "@/hooks/useEnergyDistribution"
@@ -20,6 +19,7 @@ import { useMyMeters } from "@/hooks/useMyMeters"
 import { useMyReadings } from "@/hooks/useMyReadings"
 import { Spinner } from "@/components/ui/spinner"
 import { Button } from "@/components/ui/button"
+
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
 function formatRelativeTime(dateString: string): string {
@@ -41,9 +41,7 @@ export default function DashboardPage() {
   const { t } = useI18n()
   const router = useRouter()
   const [showRegisterCoop, setShowRegisterCoop] = useState(false)
-  const { getBalance, isLoading: isBalanceLoading, error: balanceError } = useEnergyToken()
   const { accountExists, isLoading: accountLoading, isFunding, error: fundError, isTestnet, fundAccount } = useAccountSetup()
-  const [tokenBalance, setTokenBalance] = useState<number | null>(null)
 
   const { payments, isLoading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = useHorizonPayments(address)
   const { getTotalGenerated, getMemberList, getMemberInfo } = useEnergyDistribution()
@@ -58,25 +56,6 @@ export default function DashboardPage() {
   } | null>(null)
   const [communityFetchError, setCommunityFetchError] = useState<string | null>(null)
   const [communityLoadingLocal, setCommunityLoadingLocal] = useState(false)
-
-  const loadBalance = useCallback(async () => {
-    if (!address) return
-    try {
-      const value = await getBalance(address)
-      setTokenBalance(Number.parseFloat(value))
-    } catch (err) {
-      console.error("Error loading balance", err)
-      setTokenBalance(0)
-    }
-  }, [address, getBalance])
-
-  useEffect(() => {
-    if (isConnected && address) {
-      loadBalance()
-    } else {
-      setTokenBalance(null)
-    }
-  }, [isConnected, address, loadBalance])
 
   // Fetch community stats — catch errors gracefully, with timeout
   // eslint-disable-next-line react-hooks/exhaustive-deps -- hook fns are stable by identity
@@ -262,46 +241,79 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          {/* 2. Balance de tokens */}
+          {/* 2. Mi Generación */}
           <Card className="mb-4 md:mb-6">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <CardTitle className="text-xl md:text-2xl">{t("dashboard.balance")}</CardTitle>
-                <InfoTooltip text="Tu balance de tokens de energía en la red Stellar" />
+                <Zap className="w-5 h-5 text-energy-green" />
+                <CardTitle className="text-xl md:text-2xl">{t("dashboard.myGeneration")}</CardTitle>
+                <InfoTooltip text="Resumen de tu energía renovable registrada y su estado en el proceso de certificación" />
               </div>
             </CardHeader>
             <CardContent>
-              {isBalanceLoading && (
+              {readingsLoading && (
                 <div className="flex items-center gap-2 text-muted-foreground">
                   <Spinner className="size-5" />
                 </div>
               )}
-              {!isBalanceLoading && balanceError && (
-                <div className="space-y-2">
-                  <p className="text-destructive text-sm">{balanceError}</p>
-                  <Button variant="outline" size="sm" onClick={loadBalance} disabled={isBalanceLoading} className="gap-2">
-                    <RefreshCw className="size-4" />
-                    Reintentar
-                  </Button>
+              {!readingsLoading && readings.length === 0 && (
+                <div className="text-center py-6 text-muted-foreground text-sm">
+                  <Zap className="w-8 h-8 mx-auto mb-2 opacity-30" />
+                  <p>{t("dashboard.noGeneration")}</p>
                 </div>
               )}
-              {!isBalanceLoading && !balanceError && tokenBalance !== null && (
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold">{tokenBalance.toLocaleString("es-ES", { maximumFractionDigits: 2 })}</span>
-                  <span className="text-lg text-muted-foreground">kWh tokenizados</span>
-                </div>
-              )}
+              {!readingsLoading && readings.length > 0 && (() => {
+                const totalKwh = readings.reduce((s, r) => s + r.kwh_generated, 0)
+                const pendingKwh = readings.filter(r => r.status === "pending").reduce((s, r) => s + r.kwh_generated, 0)
+                const verifiedKwh = readings.filter(r => r.status === "verified").reduce((s, r) => s + r.kwh_generated, 0)
+                const certifiedKwh = readings.filter(r => r.status === "certified" || r.status === "minted").reduce((s, r) => s + r.kwh_generated, 0)
+                return (
+                  <div className="space-y-4">
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-4xl font-bold text-energy-green">{totalKwh.toLocaleString("es-ES", { maximumFractionDigits: 2 })}</span>
+                      <span className="text-lg text-muted-foreground">kWh generados</span>
+                    </div>
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="p-3 rounded-lg bg-solar-yellow/10 border border-solar-yellow/20 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <p className="text-xs text-muted-foreground">Pendientes</p>
+                          <InfoTooltip text="Lecturas registradas que aún no fueron revisadas por tu cooperativa" />
+                        </div>
+                        <p className="text-lg font-bold text-solar-yellow">{pendingKwh.toLocaleString("es-ES", { maximumFractionDigits: 0 })}</p>
+                        <p className="text-xs text-muted-foreground">kWh</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-energy-green/10 border border-energy-green/20 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <p className="text-xs text-muted-foreground">Verificados</p>
+                          <InfoTooltip text="Lecturas aprobadas por tu cooperativa, listas para ser certificadas" />
+                        </div>
+                        <p className="text-lg font-bold text-energy-green">{verifiedKwh.toLocaleString("es-ES", { maximumFractionDigits: 0 })}</p>
+                        <p className="text-xs text-muted-foreground">kWh</p>
+                      </div>
+                      <div className="p-3 rounded-lg bg-web3-purple/10 border border-web3-purple/20 text-center">
+                        <div className="flex items-center justify-center gap-1 mb-1">
+                          <p className="text-xs text-muted-foreground">Certificados</p>
+                          <InfoTooltip text="Energía certificada en blockchain como proto-certificado renovable" />
+                        </div>
+                        <p className="text-lg font-bold text-web3-purple">{certifiedKwh.toLocaleString("es-ES", { maximumFractionDigits: 0 })}</p>
+                        <p className="text-xs text-muted-foreground">kWh</p>
+                      </div>
+                    </div>
+                  </div>
+                )
+              })()}
             </CardContent>
           </Card>
 
-          {/* 3. Certification Stats */}
+          {/* 3. Impacto BeEnergy (global) */}
           <Card className="mb-4 md:mb-6">
             <CardHeader>
               <div className="flex items-center gap-2">
-                <Award className="w-5 h-5 text-energy-green" />
-                <CardTitle className="text-lg md:text-xl">{t("dashboard.certificationStats")}</CardTitle>
-                <InfoTooltip text="Estadísticas de los proto-certificados emitidos y retirados por las cooperativas" />
+                <Leaf className="w-5 h-5 text-energy-green" />
+                <CardTitle className="text-lg md:text-xl">{t("dashboard.platformImpact")}</CardTitle>
+                <InfoTooltip text="Datos globales de todas las cooperativas en la plataforma BeEnergy" />
               </div>
+              <CardDescription>{t("dashboard.platformImpactDesc")}</CardDescription>
             </CardHeader>
             <CardContent>
               {certLoading && (
@@ -311,7 +323,7 @@ export default function DashboardPage() {
               )}
               {certError && (
                 <div className="text-center py-6 text-muted-foreground text-sm">
-                  No se pudieron cargar las estadísticas de certificación
+                  No se pudieron cargar las estadísticas
                 </div>
               )}
               {certStats && !certError && (
@@ -320,34 +332,34 @@ export default function DashboardPage() {
                     <div className="text-center p-4 rounded-lg bg-energy-green/10 border border-energy-green/20">
                       <div className="flex items-center justify-center gap-1 mb-2">
                         <Zap className="w-5 h-5 text-energy-green" />
-                        <InfoTooltip text="Total de kWh con certificado emitido en blockchain" />
+                        <InfoTooltip text="Total de kWh de energía renovable certificada en blockchain por todas las cooperativas" />
                       </div>
                       <p className="text-xl font-bold text-energy-green">{certStats.total_kwh_certified.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{t("certificates.stats.certified")}</p>
+                      <p className="text-xs text-muted-foreground mt-1">kWh certificados</p>
                     </div>
                     <div className="text-center p-4 rounded-lg bg-solar-orange/10 border border-solar-orange/20">
                       <div className="flex items-center justify-center gap-1 mb-2">
-                        <Flame className="w-5 h-5 text-solar-orange" />
-                        <InfoTooltip text="kWh cuyo certificado fue comprado y retirado por un comprador" />
+                        <Award className="w-5 h-5 text-solar-orange" />
+                        <InfoTooltip text="kWh cuyos certificados fueron comprados por empresas o fondos ESG. Un certificado vendido se 'retira' para que no pueda revenderse." />
                       </div>
                       <p className="text-xl font-bold text-solar-orange">{certStats.total_kwh_retired.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{t("certificates.stats.retired")}</p>
+                      <p className="text-xs text-muted-foreground mt-1">kWh vendidos</p>
                     </div>
                     <div className="text-center p-4 rounded-lg bg-web3-purple/10 border border-web3-purple/20">
                       <div className="flex items-center justify-center gap-1 mb-2">
                         <Leaf className="w-5 h-5 text-web3-purple" />
-                        <InfoTooltip text="Estimación de CO₂ evitado por la generación renovable certificada" />
+                        <InfoTooltip text="Estimación de CO₂ que se evitó emitir gracias a la energía renovable certificada y vendida" />
                       </div>
                       <p className="text-xl font-bold text-web3-purple">{certStats.co2_avoided_kg.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{t("certificates.stats.co2")}</p>
+                      <p className="text-xs text-muted-foreground mt-1">kg CO₂ evitado</p>
                     </div>
                     <div className="text-center p-4 rounded-lg bg-solar-yellow/10 border border-solar-yellow/20">
                       <div className="flex items-center justify-center gap-1 mb-2">
-                        <Award className="w-5 h-5 text-solar-yellow" />
-                        <InfoTooltip text="Certificados emitidos que aún no han sido comprados" />
+                        <Flame className="w-5 h-5 text-solar-yellow" />
+                        <InfoTooltip text="Certificados disponibles para la venta a empresas o fondos que buscan compensar su huella de carbono" />
                       </div>
                       <p className="text-xl font-bold text-solar-yellow">{certStats.certificates_available}</p>
-                      <p className="text-xs text-muted-foreground mt-1">{t("certificates.stats.available")}</p>
+                      <p className="text-xs text-muted-foreground mt-1">a la venta</p>
                     </div>
                   </div>
 
@@ -361,7 +373,7 @@ export default function DashboardPage() {
                           <YAxis fontSize={12} />
                           <Tooltip contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "8px" }} />
                           <Bar dataKey="certificados" fill="#3DDC97" radius={[4, 4, 0, 0]} name="Certificados" />
-                          <Bar dataKey="retirados" fill="#FA9A4B" radius={[4, 4, 0, 0]} name="Retirados" />
+                          <Bar dataKey="retirados" fill="#FA9A4B" radius={[4, 4, 0, 0]} name="Vendidos" />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
