@@ -148,8 +148,8 @@ export default function LandingPage() {
           </div>
           {/* Nav center */}
           <nav className="hidden md:flex items-center gap-8 absolute left-1/2 -translate-x-1/2">
-            <a href="#que-hacemos" className="text-sm font-medium text-[#505050] hover:text-[#FEC800] transition-colors">Qué hacemos</a>
-            <a href="#como-funciona" className="text-sm font-medium text-[#505050] hover:text-[#FEC800] transition-colors">Cómo funciona</a>
+            <a href="#que-hacemos" className="text-sm font-medium text-[#505050] hover:text-[#FEC800] transition-colors">{t("landing.nav.whatWeDo")}</a>
+            <a href="#como-funciona" className="text-sm font-medium text-[#505050] hover:text-[#FEC800] transition-colors">{t("landing.nav.howItWorks")}</a>
           </nav>
           {/* Right */}
           <div className="flex items-center gap-3 ml-auto">
@@ -175,11 +175,11 @@ export default function LandingPage() {
         <div className="hero-content relative z-10 max-w-7xl mx-auto px-6 pt-40 pb-20 min-h-screen flex flex-col justify-center">
           <div className="max-w-xl">
             <h1 className="text-5xl md:text-7xl font-bold text-[#18191A] leading-[1.08] mb-6">
-              Energía renovable,<br />
-              <span style={{ color: "#FEC800" }}>certificada</span>
+              {t("landing.hero.title1")}<br />
+              <span style={{ color: "#FEC800" }}>{t("landing.hero.title2")}</span>
             </h1>
             <p className="text-xl text-[#505050] leading-relaxed mb-10">
-              Ayudamos a cooperativas a certificar su generación de energía limpia. Transparente, simple, verificable.
+              {t("landing.hero.subtitle")}
             </p>
             <div className="flex flex-col sm:flex-row items-center gap-4">
               <Button
@@ -187,7 +187,7 @@ export default function LandingPage() {
                 size="lg"
                 className="bg-[#FEC800] hover:bg-[#e8b800] text-[#18191A] font-bold text-base px-8 h-14 rounded-full hover:scale-105 transition-all shadow-lg shadow-[#FEC800]/20"
               >
-                Probar en Testnet
+                {t("landing.hero.cta")}
               </Button>
               <a
                 href="https://forms.gle/M6TKQEee4zGHjhwb8"
@@ -195,7 +195,7 @@ export default function LandingPage() {
                 rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 px-8 h-14 rounded-full border-2 border-[#18191A]/15 text-[#18191A] font-semibold text-base hover:border-[#FEC800] hover:text-[#FEC800] transition-all"
               >
-                Unite a la lista de espera
+                {t("landing.hero.waitlist")}
                 <ArrowRight className="w-4 h-4" />
               </a>
             </div>
@@ -244,12 +244,12 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="product-text-right flex-1">
-              <span className="text-sm font-bold text-[#FEC800] uppercase tracking-[0.15em]">Generación</span>
+              <span className="text-sm font-bold text-[#FEC800] uppercase tracking-[0.15em]">{t("landing.section.generation")}</span>
               <h2 className="text-3xl md:text-4xl font-bold text-[#18191A] mt-3 mb-5 leading-tight">
-                Registrá la energía solar de tu cooperativa
+                {t("landing.section.generationTitle")}
               </h2>
               <p className="text-lg text-[#505050] leading-relaxed">
-                Cada kWh producido por los paneles solares se registra en la plataforma. Sin papeles, sin Excel, todo digital.
+                {t("landing.section.generationDesc")}
               </p>
             </div>
           </div>
@@ -268,12 +268,12 @@ export default function LandingPage() {
               </div>
             </div>
             <div className="product-text-left flex-1">
-              <span className="text-sm font-bold text-[#3DDC97] uppercase tracking-[0.15em]">Certificación</span>
+              <span className="text-sm font-bold text-[#3DDC97] uppercase tracking-[0.15em]">{t("landing.section.certification")}</span>
               <h2 className="text-3xl md:text-4xl font-bold text-[#18191A] mt-3 mb-5 leading-tight">
-                Cada kWh se convierte en un certificado verificable
+                {t("landing.section.certificationTitle")}
               </h2>
               <p className="text-lg text-[#505050] leading-relaxed">
-                Los datos de generación se validan y se emite un certificado digital. Cualquier persona puede verificar su autenticidad.
+                {t("landing.section.certificationDesc")}
               </p>
             </div>
           </div>
@@ -287,7 +287,7 @@ export default function LandingPage() {
             <div className="quote-line absolute top-0 left-0 w-full bg-[#FEC800] rounded-full" style={{ height: "100%", transformOrigin: "top", scaleY: 0 }} />
           </div>
           <blockquote className="quote-text text-3xl md:text-4xl font-bold text-[#E5E7EB] leading-snug">
-            &ldquo;Cada kWh de energía renovable que produce tu cooperativa merece ser reconocido, certificado y valorado.&rdquo;
+            &ldquo;{t("landing.quote")}&rdquo;
           </blockquote>
         </div>
       </section>
@@ -296,16 +296,16 @@ export default function LandingPage() {
       <section id="como-funciona" className="py-32 px-6 bg-white">
         <div className="max-w-5xl mx-auto">
           <div className="text-center mb-20 reveal-up">
-            <h2 className="text-3xl md:text-5xl font-bold text-[#18191A]">Cómo funciona</h2>
-            <p className="text-lg text-[#505050] mt-4">Cuatro pasos simples</p>
+            <h2 className="text-3xl md:text-5xl font-bold text-[#18191A]">{t("landing.howItWorks")}</h2>
+            <p className="text-lg text-[#505050] mt-4">{t("landing.fourSteps")}</p>
           </div>
 
           <div className="grid md:grid-cols-2 gap-x-16 gap-y-12">
             {[
-              { num: "01", title: "Registrá tu cooperativa", desc: "Creá tu espacio en la plataforma. Agregá miembros y medidores en minutos." },
-              { num: "02", title: "Cargá las lecturas", desc: "Registrá la energía generada por cada medidor. Manual o por archivo." },
-              { num: "03", title: "Generá certificados", desc: "Cada período de generación se convierte en un certificado digital verificable." },
-              { num: "04", title: "Vendé a empresas ESG", desc: "Empresas y fondos retiran tus certificados para cumplir sus compromisos ambientales." },
+              { num: "01", title: t("landing.step1.title"), desc: t("landing.step1.desc") },
+              { num: "02", title: t("landing.step2.title"), desc: t("landing.step2.desc") },
+              { num: "03", title: t("landing.step3.title"), desc: t("landing.step3.desc") },
+              { num: "04", title: t("landing.step4.title"), desc: t("landing.step4.desc") },
             ].map((step, i) => (
               <div key={i} className="reveal-up flex gap-6">
                 <span className="text-5xl font-black shrink-0 text-[#FEC800]/25">{step.num}</span>

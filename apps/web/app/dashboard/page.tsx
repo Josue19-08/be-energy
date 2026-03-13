@@ -22,17 +22,17 @@ import { Button } from "@/components/ui/button"
 
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from "recharts"
 
-function formatRelativeTime(dateString: string): string {
+function formatRelativeTime(dateString: string, t: (key: string) => string): string {
   const now = new Date()
   const date = new Date(dateString)
   const diffMs = now.getTime() - date.getTime()
   const diffMin = Math.floor(diffMs / 60000)
-  if (diffMin < 1) return "Ahora"
-  if (diffMin < 60) return `Hace ${diffMin}m`
+  if (diffMin < 1) return t("dashboard.timeNow")
+  if (diffMin < 60) return t("dashboard.timeMinutes").replace("{n}", String(diffMin))
   const diffH = Math.floor(diffMin / 60)
-  if (diffH < 24) return `Hace ${diffH}h`
+  if (diffH < 24) return t("dashboard.timeHours").replace("{n}", String(diffH))
   const diffD = Math.floor(diffH / 24)
-  return `Hace ${diffD}d`
+  return t("dashboard.timeDays").replace("{n}", String(diffD))
 }
 
 export default function DashboardPage() {
@@ -97,7 +97,7 @@ export default function DashboardPage() {
       } catch (err) {
         if (cancelled) return
         console.error("Error fetching community stats:", err)
-        setCommunityFetchError("No se pudo conectar al contrato de comunidad")
+        setCommunityFetchError("communityError")
       } finally {
         if (!cancelled) setCommunityLoadingLocal(false)
       }
@@ -177,7 +177,7 @@ export default function DashboardPage() {
                       {t("dashboard.welcome")} {userProfile.name}!
                     </h2>
                     <div className="flex items-center gap-2">
-                      <p className="text-muted-foreground text-sm md:text-base">{shortAddress || "No conectado"}</p>
+                      <p className="text-muted-foreground text-sm md:text-base">{shortAddress || t("dashboard.notConnected")}</p>
                       <div className="relative flex items-center group">
                         <button
                           onClick={handleCopyAddress}
@@ -209,14 +209,14 @@ export default function DashboardPage() {
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-medium">
                     {isTestnet
-                      ? "Tu cuenta no está activada en Stellar Testnet"
-                      : "Tu cuenta necesita XLM para operar en Stellar"}
+                      ? t("dashboard.accountNotActivatedTestnet")
+                      : t("dashboard.accountNeedsXLM")}
                   </p>
                   {fundError && <p className="text-xs text-destructive mt-1">{fundError}</p>}
                 </div>
                 {isTestnet && (
                   <Button size="sm" variant="outline" onClick={fundAccount} disabled={isFunding}>
-                    {isFunding ? (<><Spinner className="size-4 mr-1" />Activando…</>) : "Activar cuenta (Friendbot)"}
+                    {isFunding ? (<><Spinner className="size-4 mr-1" />{t("dashboard.activating")}</>) : t("dashboard.activateAccount")}
                   </Button>
                 )}
               </CardContent>
@@ -247,7 +247,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <Zap className="w-5 h-5 text-energy-green" />
                 <CardTitle className="text-xl md:text-2xl">{t("dashboard.myGeneration")}</CardTitle>
-                <InfoTooltip text="Resumen de tu energía renovable registrada y su estado en el proceso de certificación" />
+                <InfoTooltip text={t("dashboard.generationTooltip")} />
               </div>
             </CardHeader>
             <CardContent>
@@ -271,29 +271,29 @@ export default function DashboardPage() {
                   <div className="space-y-4">
                     <div className="flex items-baseline gap-2">
                       <span className="text-4xl font-bold text-energy-green">{totalKwh.toLocaleString("es-ES", { maximumFractionDigits: 2 })}</span>
-                      <span className="text-lg text-muted-foreground">kWh generados</span>
+                      <span className="text-lg text-muted-foreground">{t("dashboard.kwhGenerated")}</span>
                     </div>
                     <div className="grid grid-cols-3 gap-3">
                       <div className="p-3 rounded-lg bg-solar-yellow/10 border border-solar-yellow/20 text-center">
                         <div className="flex items-center justify-center gap-1 mb-1">
-                          <p className="text-xs text-muted-foreground">Pendientes</p>
-                          <InfoTooltip text="Lecturas registradas que aún no fueron revisadas por tu cooperativa" />
+                          <p className="text-xs text-muted-foreground">{t("dashboard.pending")}</p>
+                          <InfoTooltip text={t("dashboard.pendingTooltip")} />
                         </div>
                         <p className="text-lg font-bold text-solar-yellow">{pendingKwh.toLocaleString("es-ES", { maximumFractionDigits: 0 })}</p>
                         <p className="text-xs text-muted-foreground">kWh</p>
                       </div>
                       <div className="p-3 rounded-lg bg-energy-green/10 border border-energy-green/20 text-center">
                         <div className="flex items-center justify-center gap-1 mb-1">
-                          <p className="text-xs text-muted-foreground">Verificados</p>
-                          <InfoTooltip text="Lecturas aprobadas por tu cooperativa, listas para ser certificadas" />
+                          <p className="text-xs text-muted-foreground">{t("dashboard.verified")}</p>
+                          <InfoTooltip text={t("dashboard.verifiedTooltip")} />
                         </div>
                         <p className="text-lg font-bold text-energy-green">{verifiedKwh.toLocaleString("es-ES", { maximumFractionDigits: 0 })}</p>
                         <p className="text-xs text-muted-foreground">kWh</p>
                       </div>
                       <div className="p-3 rounded-lg bg-web3-purple/10 border border-web3-purple/20 text-center">
                         <div className="flex items-center justify-center gap-1 mb-1">
-                          <p className="text-xs text-muted-foreground">Certificados</p>
-                          <InfoTooltip text="Energía certificada en blockchain como proto-certificado renovable" />
+                          <p className="text-xs text-muted-foreground">{t("dashboard.certified")}</p>
+                          <InfoTooltip text={t("dashboard.certifiedTooltip")} />
                         </div>
                         <p className="text-lg font-bold text-web3-purple">{certifiedKwh.toLocaleString("es-ES", { maximumFractionDigits: 0 })}</p>
                         <p className="text-xs text-muted-foreground">kWh</p>
@@ -311,7 +311,7 @@ export default function DashboardPage() {
               <div className="flex items-center gap-2">
                 <Leaf className="w-5 h-5 text-energy-green" />
                 <CardTitle className="text-lg md:text-xl">{t("dashboard.platformImpact")}</CardTitle>
-                <InfoTooltip text="Datos globales de todas las cooperativas en la plataforma BeEnergy" />
+                <InfoTooltip text={t("dashboard.platformImpactTooltip")} />
               </div>
               <CardDescription>{t("dashboard.platformImpactDesc")}</CardDescription>
             </CardHeader>
@@ -323,7 +323,7 @@ export default function DashboardPage() {
               )}
               {certError && (
                 <div className="text-center py-6 text-muted-foreground text-sm">
-                  No se pudieron cargar las estadísticas
+                  {t("dashboard.statsError")}
                 </div>
               )}
               {certStats && !certError && (
@@ -332,34 +332,34 @@ export default function DashboardPage() {
                     <div className="text-center p-4 rounded-lg bg-energy-green/10 border border-energy-green/20">
                       <div className="flex items-center justify-center gap-1 mb-2">
                         <Zap className="w-5 h-5 text-energy-green" />
-                        <InfoTooltip text="Total de kWh de energía renovable certificada en blockchain por todas las cooperativas" />
+                        <InfoTooltip text={t("dashboard.certifiedTooltipGlobal")} />
                       </div>
                       <p className="text-xl font-bold text-energy-green">{certStats.total_kwh_certified.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground mt-1">kWh certificados</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("dashboard.kwhCertified")}</p>
                     </div>
                     <div className="text-center p-4 rounded-lg bg-solar-orange/10 border border-solar-orange/20">
                       <div className="flex items-center justify-center gap-1 mb-2">
                         <Award className="w-5 h-5 text-solar-orange" />
-                        <InfoTooltip text="kWh cuyos certificados fueron comprados por empresas o fondos ESG. Un certificado vendido se 'retira' para que no pueda revenderse." />
+                        <InfoTooltip text={t("dashboard.soldTooltipGlobal")} />
                       </div>
                       <p className="text-xl font-bold text-solar-orange">{certStats.total_kwh_retired.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground mt-1">kWh vendidos</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("dashboard.kwhSold")}</p>
                     </div>
                     <div className="text-center p-4 rounded-lg bg-web3-purple/10 border border-web3-purple/20">
                       <div className="flex items-center justify-center gap-1 mb-2">
                         <Leaf className="w-5 h-5 text-web3-purple" />
-                        <InfoTooltip text="Estimación de CO₂ que se evitó emitir gracias a la energía renovable certificada y vendida" />
+                        <InfoTooltip text={t("dashboard.co2TooltipGlobal")} />
                       </div>
                       <p className="text-xl font-bold text-web3-purple">{certStats.co2_avoided_kg.toLocaleString()}</p>
-                      <p className="text-xs text-muted-foreground mt-1">kg CO₂ evitado</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("dashboard.co2Avoided")}</p>
                     </div>
                     <div className="text-center p-4 rounded-lg bg-solar-yellow/10 border border-solar-yellow/20">
                       <div className="flex items-center justify-center gap-1 mb-2">
                         <Flame className="w-5 h-5 text-solar-yellow" />
-                        <InfoTooltip text="Certificados disponibles para la venta a empresas o fondos que buscan compensar su huella de carbono" />
+                        <InfoTooltip text={t("dashboard.forSaleTooltip")} />
                       </div>
                       <p className="text-xl font-bold text-solar-yellow">{certStats.certificates_available}</p>
-                      <p className="text-xs text-muted-foreground mt-1">a la venta</p>
+                      <p className="text-xs text-muted-foreground mt-1">{t("dashboard.forSale")}</p>
                     </div>
                   </div>
 
@@ -372,8 +372,8 @@ export default function DashboardPage() {
                           <XAxis dataKey="name" fontSize={12} />
                           <YAxis fontSize={12} />
                           <Tooltip contentStyle={{ backgroundColor: "var(--card)", border: "1px solid var(--border)", borderRadius: "8px" }} />
-                          <Bar dataKey="certificados" fill="#3DDC97" radius={[4, 4, 0, 0]} name="Certificados" />
-                          <Bar dataKey="retirados" fill="#FA9A4B" radius={[4, 4, 0, 0]} name="Vendidos" />
+                          <Bar dataKey="certificados" fill="#3DDC97" radius={[4, 4, 0, 0]} name={t("dashboard.chartCertificados")} />
+                          <Bar dataKey="retirados" fill="#FA9A4B" radius={[4, 4, 0, 0]} name={t("dashboard.chartVendidos")} />
                         </BarChart>
                       </ResponsiveContainer>
                     </div>
@@ -395,10 +395,10 @@ export default function DashboardPage() {
               <CardHeader>
                 <div className="flex items-center gap-2">
                   <Users className="w-5 h-5 text-energy-green" />
-                  <CardTitle className="text-lg md:text-xl">Comunidad</CardTitle>
-                  <InfoTooltip text="Datos on-chain del contrato de distribución energética de tu cooperativa" />
+                  <CardTitle className="text-lg md:text-xl">{t("dashboard.community")}</CardTitle>
+                  <InfoTooltip text={t("dashboard.communityTooltip")} />
                 </div>
-                <CardDescription>Estadísticas on-chain</CardDescription>
+                <CardDescription>{t("dashboard.communityOnchain")}</CardDescription>
               </CardHeader>
               <CardContent>
                 {communityLoadingLocal && !communityStats && !communityFetchError && (
@@ -409,8 +409,8 @@ export default function DashboardPage() {
                 {communityFetchError && (
                   <div className="text-center py-8 text-muted-foreground text-sm">
                     <Users className="w-8 h-8 mx-auto mb-2 opacity-30" />
-                    <p>{communityFetchError}</p>
-                    <p className="text-xs mt-1">Se mostrará cuando el contrato esté desplegado</p>
+                    <p>{t("dashboard." + communityFetchError)}</p>
+                    <p className="text-xs mt-1">{t("dashboard.communityContractPending")}</p>
                   </div>
                 )}
                 {communityStats && (
@@ -419,12 +419,12 @@ export default function DashboardPage() {
                       <div className="text-center p-4 rounded-lg bg-energy-green/10 border border-energy-green/20">
                         <Zap className="w-6 h-6 text-energy-green mx-auto mb-2" />
                         <p className="text-2xl font-bold text-energy-green">{communityStats.totalKwh.toLocaleString()}</p>
-                        <p className="text-xs text-muted-foreground mt-1">kWh generados</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t("dashboard.communityKwh")}</p>
                       </div>
                       <div className="text-center p-4 rounded-lg bg-muted border border-border">
                         <Users className="w-6 h-6 text-foreground mx-auto mb-2" />
                         <p className="text-2xl font-bold">{communityStats.memberCount}</p>
-                        <p className="text-xs text-muted-foreground mt-1">Miembros activos</p>
+                        <p className="text-xs text-muted-foreground mt-1">{t("dashboard.activeMembers")}</p>
                       </div>
                     </div>
 
@@ -433,7 +433,7 @@ export default function DashboardPage() {
                         <div className="flex items-center justify-between">
                           <div className="flex items-center gap-2">
                             <TrendingUp className="w-4 h-4 text-energy-green" />
-                            <span className="text-sm font-medium">Tu participación</span>
+                            <span className="text-sm font-medium">{t("dashboard.yourShare")}</span>
                           </div>
                           <span className="text-lg font-bold text-energy-green">{communityStats.userPercent}%</span>
                         </div>
@@ -442,14 +442,14 @@ export default function DashboardPage() {
 
                     {communityStats.userPercent === null && (
                       <div className="text-center text-xs text-muted-foreground border border-border rounded-lg p-3">
-                        Aún no eres miembro de la comunidad energética
+                        {t("dashboard.notMember")}
                       </div>
                     )}
                   </div>
                 )}
                 {!communityLoadingLocal && !communityFetchError && !communityStats && (
                   <div className="text-center py-8 text-muted-foreground text-sm">
-                    No hay datos de comunidad disponibles
+                    {t("dashboard.noCommunityData")}
                   </div>
                 )}
               </CardContent>
@@ -460,8 +460,8 @@ export default function DashboardPage() {
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-2">
-                    <CardTitle className="text-lg md:text-xl">Últimas transacciones</CardTitle>
-                    <InfoTooltip text="Pagos reales registrados en la red Stellar (Horizon API)" />
+                    <CardTitle className="text-lg md:text-xl">{t("dashboard.lastTransactions")}</CardTitle>
+                    <InfoTooltip text={t("dashboard.transactionsTooltip")} />
                   </div>
                   <Button variant="ghost" size="sm" onClick={refetchPayments} disabled={paymentsLoading} className="gap-1 text-xs">
                     <RefreshCw className={`size-3 ${paymentsLoading ? "animate-spin" : ""}`} />
@@ -483,7 +483,7 @@ export default function DashboardPage() {
                 )}
                 {!paymentsLoading && !paymentsError && recentPayments.length === 0 && (
                   <div className="text-center py-8 text-muted-foreground text-sm">
-                    No hay transacciones aún
+                    {t("dashboard.noTransactions")}
                   </div>
                 )}
                 {recentPayments.length > 0 && (
@@ -503,8 +503,8 @@ export default function DashboardPage() {
                             {isIncoming ? <ArrowDownLeft className="w-4 h-4" /> : <ArrowUpRight className="w-4 h-4" />}
                           </div>
                           <div className="flex-1 min-w-0">
-                            <p className="text-sm font-medium">{isIncoming ? "Recibido" : "Enviado"}</p>
-                            <p className="text-xs text-muted-foreground">{formatRelativeTime(payment.created_at)}</p>
+                            <p className="text-sm font-medium">{isIncoming ? t("dashboard.received") : t("dashboard.sent")}</p>
+                            <p className="text-xs text-muted-foreground">{formatRelativeTime(payment.created_at, t)}</p>
                           </div>
                           <div className="text-right">
                             <p className={`text-sm font-bold ${isIncoming ? "text-energy-green" : "text-foreground"}`}>
@@ -597,7 +597,7 @@ export default function DashboardPage() {
                           <p className="text-xs text-muted-foreground">
                             {reading.reading_date
                               ? new Date(reading.reading_date).toLocaleDateString()
-                              : formatRelativeTime(reading.created_at)}
+                              : formatRelativeTime(reading.created_at, t)}
                           </p>
                         </div>
                         <div className="text-right">
