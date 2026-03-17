@@ -1,7 +1,7 @@
 # 9. BeEnergy — Arquitectura para el Equipo
 
 > Actualización 16 de marzo 2026
-> v0.3.0 · Stellar Testnet
+> v0.4.0 · Stellar Testnet
 
 ---
 
