@@ -16,6 +16,7 @@ import { InfoTooltip } from "@/components/shared/info-tooltip"
 import { Spinner } from "@/components/ui/spinner"
 import { useAuth } from "@/lib/auth-context"
 import { RetireCertificateModal } from "@/components/modals/retire-certificate-modal"
+import { getStellarExpertUrl } from "@/lib/utils"
 
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" })
@@ -36,7 +37,6 @@ function StatusBadge({ status, t }: { status: string; t: (key: string) => string
 
 function CertificateCard({ cert, t, onRetire }: { cert: Certificate; t: (key: string) => string; onRetire?: (cert: Certificate) => void }) {
   const [expanded, setExpanded] = useState(false)
-  const stellarExpertBase = "https://stellar.expert/explorer/testnet/tx/"
 
   return (
     <Card className="border border-border">
@@ -66,7 +66,7 @@ function CertificateCard({ cert, t, onRetire }: { cert: Certificate; t: (key: st
             )}
             {cert.mint_tx_hash && (
               <a
-                href={`${stellarExpertBase}${cert.mint_tx_hash}`}
+                href={getStellarExpertUrl(cert.mint_tx_hash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-web3-purple hover:text-web3-purple/80 transition-colors"

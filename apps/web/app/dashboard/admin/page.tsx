@@ -13,6 +13,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Spinner } from "@/components/ui/spinner"
 import { Building2, Users, Zap, Award, Shield, ShieldAlert, ArrowRight, ExternalLink } from "lucide-react"
 import { InfoTooltip } from "@/components/shared/info-tooltip"
+import { getStellarExpertUrl } from "@/lib/utils"
 
 export default function SuperAdminPage() {
   const { isConnected, isPending: walletPending } = useWallet()
@@ -31,7 +32,6 @@ export default function SuperAdminPage() {
   const isPageLoading = authLoading || walletPending || loading
 
   const truncateAddress = (addr: string) => `${addr.slice(0, 6)}...${addr.slice(-4)}`
-  const stellarExpertBase = "https://stellar.expert/explorer/testnet"
 
   return (
     <div className="min-h-screen bg-background">
@@ -214,7 +214,7 @@ export default function SuperAdminPage() {
                             </div>
                             {mint.mint_tx_hash && (
                               <a
-                                href={`${stellarExpertBase}/tx/${mint.mint_tx_hash}`}
+                                href={getStellarExpertUrl(mint.mint_tx_hash)}
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="text-primary hover:text-primary/80"
