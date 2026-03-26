@@ -43,6 +43,10 @@ export function CreateCertificateModal({ isOpen, onClose, cooperativeId, onSucce
 
   const handleSubmit = async () => {
     if (!periodStart || !periodEnd || !totalKwh) return
+    if (periodStart > periodEnd) {
+      setError(t("createCert.invalidDateRange"))
+      return
+    }
     setIsSubmitting(true)
     setError(null)
     try {

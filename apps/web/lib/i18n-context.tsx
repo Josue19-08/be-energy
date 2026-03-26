@@ -328,6 +328,7 @@ const translations = {
     "createCert.location": "Ubicación (opcional)",
     "createCert.submit": "Crear Certificado",
     "createCert.success": "Certificado creado exitosamente",
+    "createCert.invalidDateRange": "La fecha de inicio debe ser anterior a la fecha de fin",
 
     // Retirar certificado
     "retire.title": "Retirar Certificado",
@@ -698,6 +699,7 @@ const translations = {
     "createCert.location": "Location (optional)",
     "createCert.submit": "Create Certificate",
     "createCert.success": "Certificate created successfully",
+    "createCert.invalidDateRange": "The start date must be before the end date",
 
     // Retire certificate
     "retire.title": "Retire Certificate",

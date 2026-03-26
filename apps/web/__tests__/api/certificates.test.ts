@@ -77,6 +77,37 @@ describe("POST /api/certificates", () => {
     expect(json.error).toMatch(/Validation failed/)
   })
 
+  it("rechaza fecha de inicio posterior a fecha de fin → 400", async () => {
+    const res = await POST(
+      makePost({
+        cooperative_id: COOP_ID,
+        generation_period_start: "2028-03-09",
+        generation_period_end: "2026-03-19",
+        total_kwh: 150,
+        technology: "solar",
+      })
+    )
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toMatch(/Validation failed/)
+  })
+
+  it("acepta fechas iguales (mismo día) → 201", async () => {
+    const fakeCert = { id: "cert-2", cooperative_id: COOP_ID, total_kwh: 50, technology: "solar", status: "pending" }
+    mockSingle.mockResolvedValueOnce({ data: fakeCert, error: null })
+
+    const res = await POST(
+      makePost({
+        cooperative_id: COOP_ID,
+        generation_period_start: "2025-06-15",
+        generation_period_end: "2025-06-15",
+        total_kwh: 50,
+        technology: "solar",
+      })
+    )
+    expect(res.status).toBe(201)
+  })
+
   it("crea certificado válido → 201", async () => {
     const fakeCert = {
       id: "cert-1",
