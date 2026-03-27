@@ -4,22 +4,31 @@ import { NextRequest } from "next/server"
 const ADDR = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 const COOP_ID = "00000000-0000-0000-0000-000000000001"
 
-const { mockSingle, mockOrder, mockFrom } = vi.hoisted(() => {
+const { mockSingle, mockOrder, mockFrom, mockLimit } = vi.hoisted(() => {
   const mockSingle = vi.fn()
+  const mockLimit = vi.fn(() => ({ data: [] as unknown[], error: null }))
   const mockOrder = vi.fn(() => ({ data: [], error: null }))
   const mockEq: ReturnType<typeof vi.fn> = vi.fn(() => ({
     order: mockOrder,
     eq: mockEq,
-    gte: vi.fn(() => ({ lte: vi.fn(() => ({ data: [], error: null })), order: mockOrder, eq: mockEq })),
+    gte: vi.fn(() => ({
+      lte: vi.fn(() => ({
+        limit: mockLimit,
+        data: [],
+        error: null
+      })),
+      order: mockOrder,
+      eq: mockEq
+    })),
     lte: vi.fn(() => ({ data: [], error: null })),
   }))
-  const mockSelect = vi.fn(() => ({ single: mockSingle }))
+  const mockSelect = vi.fn(() => ({ single: mockSingle, eq: mockEq, order: mockOrder }))
   const mockInsert = vi.fn(() => ({ select: mockSelect }))
   const mockFrom = vi.fn(() => ({
-    select: vi.fn(() => ({ order: mockOrder, eq: mockEq })),
+    select: mockSelect,
     insert: mockInsert,
   }))
-  return { mockSingle, mockOrder, mockFrom }
+  return { mockSingle, mockOrder, mockFrom, mockLimit }
 })
 
 vi.mock("@/lib/supabase", () => ({
@@ -92,8 +101,26 @@ describe("POST /api/certificates", () => {
     expect(json.error).toMatch(/Validation failed/)
   })
 
+  it("rechaza si no hay lecturas verificadas → 400", async () => {
+    mockLimit.mockResolvedValueOnce({ data: [], error: null })
+
+    const res = await POST(
+      makePost({
+        cooperative_id: COOP_ID,
+        generation_period_start: "2025-01-01",
+        generation_period_end: "2025-01-31",
+        total_kwh: 150,
+        technology: "solar",
+      })
+    )
+    expect(res.status).toBe(400)
+    const json = await res.json()
+    expect(json.error).toMatch(/No verified readings for this period/)
+  })
+
   it("acepta fechas iguales (mismo día) → 201", async () => {
     const fakeCert = { id: "cert-2", cooperative_id: COOP_ID, total_kwh: 50, technology: "solar", status: "pending" }
+    mockLimit.mockResolvedValueOnce({ data: [{ id: "reading-1" }], error: null })
     mockSingle.mockResolvedValueOnce({ data: fakeCert, error: null })
 
     const res = await POST(
@@ -108,7 +135,7 @@ describe("POST /api/certificates", () => {
     expect(res.status).toBe(201)
   })
 
-  it("crea certificado válido → 201", async () => {
+  it("crea certificado válido con lecturas verificadas → 201", async () => {
     const fakeCert = {
       id: "cert-1",
       cooperative_id: COOP_ID,
@@ -116,6 +143,7 @@ describe("POST /api/certificates", () => {
       technology: "solar",
       status: "pending",
     }
+    mockLimit.mockResolvedValueOnce({ data: [{ id: "reading-1" }], error: null })
     mockSingle.mockResolvedValueOnce({ data: fakeCert, error: null })
 
     const res = await POST(

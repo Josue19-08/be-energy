@@ -119,6 +119,12 @@ export const mintSchema = z.object({
   { message: "reading_id or certificate_id required" }
 )
 
+// Update reading
+export const updateReadingSchema = z.object({
+  reading_id: uuid,
+  status: z.enum(["pending", "verified", "rejected"]),
+})
+
 // Retire
 export const retireSchema = z.object({
   certificate_id: uuid,

@@ -5,16 +5,18 @@ const ADDR = "GAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"
 const COOP_ID = "00000000-0000-0000-0000-000000000001"
 const METER_ID = "00000000-0000-0000-0000-000000000004"
 
-const { mockSingle, mockEq, mockFrom } = vi.hoisted(() => {
+const { mockSingle, mockEq, mockFrom, mockUpdate } = vi.hoisted(() => {
   const mockSingle = vi.fn()
-  const mockEq: ReturnType<typeof vi.fn> = vi.fn(() => ({ single: mockSingle, eq: mockEq }))
-  const mockSelect = vi.fn(() => ({ single: mockSingle }))
+  const mockSelect = vi.fn(() => ({ single: mockSingle, eq: mockEq }))
+  const mockEq: ReturnType<typeof vi.fn> = vi.fn(() => ({ single: mockSingle, eq: mockEq, select: mockSelect }))
   const mockInsert = vi.fn(() => ({ select: mockSelect }))
+  const mockUpdate = vi.fn(() => ({ eq: mockEq, select: mockSelect }))
   const mockFrom = vi.fn(() => ({
     select: vi.fn(() => ({ eq: mockEq })),
     insert: mockInsert,
+    update: mockUpdate,
   }))
-  return { mockSingle, mockEq, mockFrom }
+  return { mockSingle, mockEq, mockFrom, mockUpdate }
 })
 
 vi.mock("@/lib/supabase", () => ({
@@ -27,10 +29,15 @@ vi.mock("@/lib/auth/middleware", () => ({
     cooperative_ids: [COOP_ID],
     admin_cooperative_ids: [COOP_ID],
   })),
+  requireAdmin: vi.fn(async () => ({
+    sub: ADDR,
+    cooperative_ids: [COOP_ID],
+    admin_cooperative_ids: [COOP_ID],
+  })),
   isSession: vi.fn(() => true),
 }))
 
-import { POST } from "@/app/api/readings/route"
+import { POST, PATCH } from "@/app/api/readings/route"
 
 function makeRequest(body: Record<string, unknown>) {
   return new NextRequest("http://localhost/api/readings", {
@@ -103,5 +110,70 @@ describe("POST /api/readings", () => {
     const json = await res.json()
     expect(json.status).toBe("pending")
     expect(json.id).toBe("reading-1")
+  })
+})
+
+function makePatchRequest(body: Record<string, unknown>) {
+  return new NextRequest("http://localhost/api/readings", {
+    method: "PATCH",
+    body: JSON.stringify(body),
+  })
+}
+
+describe("PATCH /api/readings", () => {
+  beforeEach(() => vi.clearAllMocks())
+
+  const READING_ID = "00000000-0000-0000-0000-000000000010"
+
+  it("rechaza sin reading_id → 400", async () => {
+    const res = await PATCH(makePatchRequest({ status: "verified" }))
+    expect(res.status).toBe(400)
+  })
+
+  it("rechaza con status inválido → 400", async () => {
+    const res = await PATCH(makePatchRequest({ reading_id: READING_ID, status: "invalid" }))
+    expect(res.status).toBe(400)
+  })
+
+  it("rechaza si reading no existe → 404", async () => {
+    mockSingle.mockResolvedValueOnce({ data: null, error: null })
+
+    const res = await PATCH(makePatchRequest({ reading_id: READING_ID, status: "verified" }))
+    expect(res.status).toBe(404)
+    const json = await res.json()
+    expect(json.error).toMatch(/Reading not found/)
+  })
+
+  it("actualiza status a verified → 200", async () => {
+    const updatedReading = {
+      id: READING_ID,
+      cooperative_id: COOP_ID,
+      status: "verified",
+      kwh_generated: 5,
+    }
+    mockSingle.mockResolvedValueOnce({ data: { cooperative_id: COOP_ID }, error: null })
+    mockSingle.mockResolvedValueOnce({ data: updatedReading, error: null })
+
+    const res = await PATCH(makePatchRequest({ reading_id: READING_ID, status: "verified" }))
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.status).toBe("verified")
+    expect(json.id).toBe(READING_ID)
+  })
+
+  it("actualiza status a rejected → 200", async () => {
+    const updatedReading = {
+      id: READING_ID,
+      cooperative_id: COOP_ID,
+      status: "rejected",
+      kwh_generated: 5,
+    }
+    mockSingle.mockResolvedValueOnce({ data: { cooperative_id: COOP_ID }, error: null })
+    mockSingle.mockResolvedValueOnce({ data: updatedReading, error: null })
+
+    const res = await PATCH(makePatchRequest({ reading_id: READING_ID, status: "rejected" }))
+    expect(res.status).toBe(200)
+    const json = await res.json()
+    expect(json.status).toBe("rejected")
   })
 })

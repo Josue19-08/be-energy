@@ -5,7 +5,7 @@ import { useI18n } from "@/lib/i18n-context"
 import { useWallet } from "@/lib/wallet-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { X, Building2, AlertCircle, CheckCircle2 } from "lucide-react"
+import { X, Building2, AlertCircle, CheckCircle2, ChevronDown } from "lucide-react"
 
 interface RegisterCooperativeModalProps {
   isOpen: boolean
@@ -94,12 +94,15 @@ export function RegisterCooperativeModal({ isOpen, onClose, onSuccess }: Registe
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">{t("registerCoop.technology")}</label>
-            <select value={technology} onChange={(e) => setTechnology(e.target.value)} className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm">
-              <option value="solar">{t("registerCoop.techs.solar")}</option>
-              <option value="wind">{t("registerCoop.techs.wind")}</option>
-              <option value="hydro">{t("registerCoop.techs.hydro")}</option>
-              <option value="mixed">{t("registerCoop.techs.mixed")}</option>
-            </select>
+            <div className="relative">
+              <select value={technology} onChange={(e) => setTechnology(e.target.value)} className="w-full rounded-md border border-border bg-background pl-3 pr-10 py-2 text-sm appearance-none cursor-pointer focus:outline-none focus-visible:ring-2 focus-visible:ring-ring/50">
+                <option value="solar">{t("registerCoop.techs.solar")}</option>
+                <option value="wind">{t("registerCoop.techs.wind")}</option>
+                <option value="hydro">{t("registerCoop.techs.hydro")}</option>
+                <option value="mixed">{t("registerCoop.techs.mixed")}</option>
+              </select>
+              <ChevronDown className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-foreground mb-1">{t("registerCoop.location")}</label>

@@ -38,6 +38,7 @@ function formatRelativeTime(dateString: string, t: (key: string) => string): str
 export default function DashboardPage() {
   const { isConnected, isPending: walletPending, userProfile, address } = useWallet()
   const { session, refreshSession } = useAuth()
+
   const { t } = useI18n()
   const router = useRouter()
   const [showRegisterCoop, setShowRegisterCoop] = useState(false)
@@ -223,20 +224,84 @@ export default function DashboardPage() {
             </Card>
           )}
 
-          {/* Register cooperative CTA */}
-          {session && session.admin_cooperative_ids.length === 0 && (
-            <Card className="mb-4 md:mb-6 border border-primary/20 bg-primary/5">
-              <CardContent className="p-4 flex items-center gap-3">
-                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                  <Building2 className="w-5 h-5 text-primary" />
+          {/* Onboarding Card — shown when user has no cooperative memberships */}
+          {session && session.cooperative_ids.length === 0 && (
+            <Card className="mb-4 md:mb-6 w-full max-w-full overflow-hidden border border-primary/20 bg-primary/5">
+              <CardHeader className="pb-3 px-4 sm:px-6 lg:px-8">
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                    <Building2 className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <CardTitle className="text-base md:text-lg break-words">{t("onboarding.title")}</CardTitle>
+                    <CardDescription className="text-xs md:text-sm break-words whitespace-normal">{t("onboarding.subtitle")}</CardDescription>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium">{t("registerCoop.cta")}</p>
-                  <p className="text-xs text-muted-foreground">{t("registerCoop.ctaDesc")}</p>
+              </CardHeader>
+
+              <CardContent className="pt-0 px-4 sm:px-6 lg:px-8 pb-4 md:pb-6 space-y-4 md:space-y-6">
+                {/* Step Indicator — vertical until lg (1024px) */}
+                <div className="flex flex-col lg:flex-row lg:items-center gap-3 lg:gap-0 w-full">
+                  {/* Step 1 — Done */}
+                  <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-energy-green/20 flex items-center justify-center shrink-0">
+                      <Check className="w-4 h-4 text-energy-green" />
+                    </div>
+                    <span className="text-xs md:text-sm font-medium text-energy-green line-through break-words">{t("onboarding.stepWallet")}</span>
+                  </div>
+
+                  <div className="hidden lg:block flex-1 h-px bg-border mx-3" />
+
+                  {/* Step 2 — Current */}
+                  <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0">
+                    <div className="w-8 h-8 rounded-full bg-primary/20 flex items-center justify-center ring-2 ring-primary ring-offset-2 ring-offset-background shrink-0">
+                      <Users className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-xs md:text-sm font-semibold text-primary break-words">{t("onboarding.stepJoin")}</span>
+                  </div>
+
+                  <div className="hidden lg:block flex-1 h-px bg-border mx-3" />
+
+                  {/* Step 3 — Pending */}
+                  <div className="flex items-center gap-2 w-full lg:w-auto lg:shrink-0 opacity-40">
+                    <div className="w-8 h-8 rounded-full bg-muted/50 flex items-center justify-center shrink-0">
+                      <Gauge className="w-4 h-4 text-muted-foreground" />
+                    </div>
+                    <span className="text-xs md:text-sm font-medium text-muted-foreground break-words">{t("onboarding.stepReadings")}</span>
+                  </div>
                 </div>
-                <Button size="sm" onClick={() => setShowRegisterCoop(true)}>
-                  {t("registerCoop.title")}
-                </Button>
+
+                {/* Two-action grid */}
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {/* Create cooperative */}
+                  <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/50 p-4 min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("onboarding.createCoopTitle")}</p>
+                    <p className="text-sm text-muted-foreground flex-1 break-words whitespace-normal">{t("onboarding.createCoopDesc")}</p>
+                    <Button size="sm" className="w-full mt-1" onClick={() => setShowRegisterCoop(true)}>
+                      <Building2 className="w-4 h-4" />
+                      {t("onboarding.createCoopButton")}
+                    </Button>
+                  </div>
+
+                  {/* Join cooperative */}
+                  <div className="flex flex-col gap-2 rounded-lg border border-border bg-muted/50 p-4 min-w-0">
+                    <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("onboarding.joinTitle")}</p>
+                    <p className="text-sm text-muted-foreground break-words whitespace-normal">{t("onboarding.joinInstructions")}</p>
+                    {address && (
+                      <div className="flex items-center gap-2 rounded-md border border-border bg-background px-3 py-2 min-w-0 overflow-hidden">
+                        <span className="text-xs font-mono text-muted-foreground truncate flex-1 min-w-0">{address}</span>
+                        <button
+                          onClick={handleCopyAddress}
+                          aria-label={copied ? t("onboarding.copiedAddress") : t("onboarding.copyAddress")}
+                          className={`shrink-0 p-1 rounded transition-colors ${copied ? "text-energy-green" : "text-muted-foreground hover:text-foreground"}`}
+                        >
+                          {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    )}
+                    <p className="text-xs text-muted-foreground break-words whitespace-normal">{t("onboarding.joinFootnote")}</p>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           )}

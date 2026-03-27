@@ -110,6 +110,14 @@ export async function POST(req: NextRequest) {
       .update({ status: "retired" })
       .eq("id", certificate_id)
 
+    await supabase.from("events").insert({
+      type: "burn",
+      amount: cert.total_kwh,
+      tx_hash: burnTxHash,
+      cooperative_id: cert.cooperative_id,
+      stellar_address: buyer_address,
+    })
+
     return NextResponse.json({
       success: true,
       retirement,

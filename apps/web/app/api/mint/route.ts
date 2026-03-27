@@ -7,6 +7,16 @@ import { validateBody } from "@/lib/validation/validate"
 import { mintSchema } from "@/lib/validation/schemas"
 import { safeCatchError } from "@/lib/errors/safe-error"
 
+async function withRetry<T>(fn: () => Promise<T>, label: string): Promise<T> {
+  try {
+    return await fn()
+  } catch (err) {
+    console.warn(`[MINT] ${label} failed, retrying in 2s...`, err instanceof Error ? err.message : err)
+    await new Promise((r) => setTimeout(r, 2000))
+    return fn()
+  }
+}
+
 async function markFailed(readingId: string, reason: string) {
   await supabase
     .from("readings")
@@ -25,7 +35,7 @@ async function mintOnChain(
   const server = new StellarSdk.rpc.Server(STELLAR_CONFIG.RPC_URL)
   const minterKeypair = StellarSdk.Keypair.fromSecret(minterSecret)
   const minterPublic = minterKeypair.publicKey()
-  const minterAccount = await server.getAccount(minterPublic)
+  const minterAccount = await withRetry(() => server.getAccount(minterPublic), "getAccount")
   const contract = new StellarSdk.Contract(contractAddress)
 
   const transaction = new StellarSdk.TransactionBuilder(minterAccount, {
@@ -43,17 +53,22 @@ async function mintOnChain(
     .setTimeout(30)
     .build()
 
-  const preparedTx = await server.prepareTransaction(transaction)
+  const preparedTx = await withRetry(() => server.prepareTransaction(transaction), "prepareTransaction")
   preparedTx.sign(minterKeypair)
 
-  const sendResult = await server.sendTransaction(preparedTx)
+  const sendResult = await withRetry(() => server.sendTransaction(preparedTx), "sendTransaction")
 
   if (sendResult.status === "ERROR") {
     throw new Error("Transaction failed to submit")
   }
 
+  const MAX_POLL_ATTEMPTS = 30
+  let attempts = 0
   let txResponse = await server.getTransaction(sendResult.hash)
   while (txResponse.status === "NOT_FOUND") {
+    if (++attempts >= MAX_POLL_ATTEMPTS) {
+      throw new Error("Transaction confirmation timeout — check Stellar network status")
+    }
     await new Promise((resolve) => setTimeout(resolve, 1000))
     txResponse = await server.getTransaction(sendResult.hash)
   }
@@ -142,6 +157,14 @@ export async function POST(req: NextRequest) {
         tx_hash: txHash,
       })
 
+      await supabase.from("events").insert({
+        type: "mint",
+        amount: cert.total_kwh,
+        tx_hash: txHash,
+        cooperative_id: cert.cooperative_id,
+        stellar_address: mintTo,
+      })
+
       return NextResponse.json({
         success: true,
         tx_hash: txHash,
@@ -184,6 +207,14 @@ export async function POST(req: NextRequest) {
       prosumer_address: prosumerAddress,
       amount_hdrop: kwhAmount,
       tx_hash: txHash,
+    })
+
+    await supabase.from("events").insert({
+      type: "mint",
+      amount: kwhAmount,
+      tx_hash: txHash,
+      cooperative_id: reading.cooperative_id,
+      stellar_address: prosumerAddress,
     })
 
     return NextResponse.json({

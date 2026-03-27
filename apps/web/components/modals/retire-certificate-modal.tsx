@@ -6,6 +6,7 @@ import { useWallet } from "@/lib/wallet-context"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { X, Flame, AlertCircle, CheckCircle2, ExternalLink } from "lucide-react"
+import { getStellarExpertUrl } from "@/lib/utils"
 
 interface Certificate {
   id: string
@@ -100,7 +101,7 @@ export function RetireCertificateModal({ isOpen, onClose, certificate, onSuccess
             <CheckCircle2 className="w-12 h-12 text-energy-green mx-auto mb-3" />
             <p className="font-semibold text-foreground mb-2">{t("retire.success")}</p>
             <a
-              href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+              href={getStellarExpertUrl(txHash)}
               target="_blank"
               rel="noopener noreferrer"
               className="inline-flex items-center gap-1 text-sm text-primary hover:underline"

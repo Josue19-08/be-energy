@@ -6,6 +6,7 @@ import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { CheckCircle, Copy, ExternalLink, Leaf } from "lucide-react"
 import { useRouter } from "next/navigation"
+import { getStellarExpertUrl } from "@/lib/utils"
 
 interface SuccessModalProps {
   open: boolean
@@ -128,7 +129,7 @@ export function SuccessModal({
                 </Button>
               </div>
               <a
-                href={`https://stellar.expert/explorer/testnet/tx/${txHash}`}
+                href={getStellarExpertUrl(txHash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-sm text-primary hover:underline flex items-center gap-1 justify-center"

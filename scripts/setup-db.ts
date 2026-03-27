@@ -154,6 +154,17 @@ CREATE TABLE IF NOT EXISTS audit_log (
   ip_address TEXT,
   created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- 9. Events table (for activity feed)
+CREATE TABLE IF NOT EXISTS events (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  type TEXT NOT NULL CHECK (type IN ('mint', 'burn')),
+  amount REAL NOT NULL,
+  tx_hash TEXT NOT NULL,
+  cooperative_id UUID REFERENCES cooperatives(id),
+  stellar_address TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT now()
+);
 `
 
 async function main() {
