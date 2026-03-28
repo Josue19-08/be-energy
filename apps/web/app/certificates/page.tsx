@@ -1,5 +1,4 @@
-"use client"
-
+"use client";
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { useWallet } from "@/lib/wallet-context"
@@ -9,7 +8,7 @@ import { useCertificates, type Certificate } from "@/hooks/useCertificates"
 import { Sidebar } from "@/components/sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent } from "@/components/ui/card"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { ArrowLeft, Award, Zap, Flame, Leaf, ExternalLink, ChevronDown, ChevronUp, AlertCircle } from "lucide-react"
 import { InfoTooltip } from "@/components/shared/info-tooltip"
@@ -17,22 +16,37 @@ import { Spinner } from "@/components/ui/spinner"
 import { useAuth } from "@/lib/auth-context"
 import { RetireCertificateModal } from "@/components/modals/retire-certificate-modal"
 import { getStellarExpertUrl } from "@/lib/utils"
+import { CertificateStatCard } from "@/components/certificates/certificate-stat-card"
+
+type CertificateStatusFilter = "all" | "pending" | "available" | "retired"
 
 function formatDate(isoString: string): string {
-  return new Date(isoString).toLocaleDateString("es-ES", { year: "numeric", month: "short", day: "numeric" })
+  return new Date(isoString).toLocaleDateString("es-ES", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
 }
 
-function StatusBadge({ status, t }: { status: string; t: (key: string) => string }) {
+function StatusBadge({
+  status,
+  t,
+}: {
+  status: string;
+  t: (key: string) => string;
+}) {
   const styles: Record<string, string> = {
     pending: "bg-solar-yellow/10 text-solar-yellow border-solar-yellow/20",
     available: "bg-energy-green/10 text-energy-green border-energy-green/20",
     retired: "bg-solar-orange/10 text-solar-orange border-solar-orange/20",
-  }
+  };
   return (
-    <span className={`text-xs font-medium px-2 py-1 rounded-full border ${styles[status] || "bg-muted text-muted-foreground"}`}>
+    <span
+      className={`text-xs font-medium px-2 py-1 rounded-full border ${styles[status] || "bg-muted text-muted-foreground"}`}
+    >
       {t(`certificates.status.${status}`)}
     </span>
-  )
+  );
 }
 
 function CertificateCard({ cert, t, onRetire }: { cert: Certificate; t: (key: string) => string; onRetire?: (cert: Certificate) => void }) {
@@ -50,16 +64,27 @@ function CertificateCard({ cert, t, onRetire }: { cert: Certificate; t: (key: st
               <StatusBadge status={cert.status} t={t} />
             </div>
             <p className="text-xs text-muted-foreground">
-              {t("certificates.period")}: {formatDate(cert.generation_period_start)} — {formatDate(cert.generation_period_end)}
+              {t("certificates.period")}:{" "}
+              {formatDate(cert.generation_period_start)} —{" "}
+              {formatDate(cert.generation_period_end)}
             </p>
             <div className="flex items-center gap-4 mt-2">
-              <span className="text-sm font-semibold">{cert.total_kwh.toLocaleString()} kWh</span>
-              <span className="text-xs text-muted-foreground capitalize">{cert.technology}</span>
+              <span className="text-sm font-semibold">
+                {cert.total_kwh.toLocaleString()} kWh
+              </span>
+              <span className="text-xs text-muted-foreground capitalize">
+                {cert.technology}
+              </span>
             </div>
           </div>
           <div className="flex items-center gap-2">
             {cert.status === "available" && onRetire && (
-              <Button size="sm" variant="outline" onClick={() => onRetire(cert)} className="text-solar-orange border-solar-orange/30 hover:bg-solar-orange/10">
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => onRetire(cert)}
+                className="text-solar-orange border-solar-orange/30 hover:bg-solar-orange/10"
+              >
                 <Flame className="w-3.5 h-3.5 mr-1" />
                 {t("retire.title")}
               </Button>
@@ -79,7 +104,11 @@ function CertificateCard({ cert, t, onRetire }: { cert: Certificate; t: (key: st
               onClick={() => setExpanded(!expanded)}
               className="text-muted-foreground hover:text-foreground transition-colors p-1"
             >
-              {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+              {expanded ? (
+                <ChevronUp className="w-4 h-4" />
+              ) : (
+                <ChevronDown className="w-4 h-4" />
+              )}
             </button>
           </div>
         </div>
@@ -108,35 +137,60 @@ function CertificateCard({ cert, t, onRetire }: { cert: Certificate; t: (key: st
         )}
       </CardContent>
     </Card>
-  )
+  );
 }
 
 export default function CertificatesPage() {
-  const { isConnected } = useWallet()
-  const { isAuthenticated } = useAuth()
-  const { t } = useI18n()
-  const router = useRouter()
+  const { isConnected } = useWallet();
+  const { isAuthenticated } = useAuth();
+  const { t } = useI18n();
+  const router = useRouter();
 
-  const [techFilter, setTechFilter] = useState<string>("all")
-  const [statusFilter, setStatusFilter] = useState<string>("all")
-  const [retireCert, setRetireCert] = useState<Certificate | null>(null)
+  const [techFilter, setTechFilter] = useState<string>("all");
+  const [statusFilter, setStatusFilter] =
+    useState<CertificateStatusFilter>("all");
+  const [retireCert, setRetireCert] = useState<Certificate | null>(null);
 
-  const { stats, loading: statsLoading, error: statsError } = useCertificateStats()
-  const { certificates, loading: certsLoading, error: certsError, refetch } = useCertificates({
+  const {
+    stats,
+    loading: statsLoading,
+    error: statsError,
+    refetch: refetchStats,
+  } = useCertificateStats();
+  const {
+    certificates,
+    loading: certsLoading,
+    error: certsError,
+    refetch,
+  } = useCertificates({
     technology: techFilter === "all" ? undefined : techFilter,
     status: statusFilter === "all" ? undefined : statusFilter,
-  })
+  });
+
+  const handleStatusQuickFilter = (
+    nextStatus: "all" | "available" | "retired",
+  ) => {
+    if (nextStatus === "all") {
+      setStatusFilter("all");
+      return;
+    }
+    setStatusFilter((current) => (current === nextStatus ? "all" : nextStatus));
+  };
+
+  const handleRetireSuccess = async () => {
+    await Promise.all([refetch(), refetchStats()]);
+  };
 
   useEffect(() => {
     if (!isConnected) {
-      router.push("/")
+      router.push("/");
     }
-  }, [isConnected, router])
+  }, [isConnected, router]);
 
-  if (!isConnected) return null
+  if (!isConnected) return null;
 
   // Extract unique technologies from certificates for filter
-  const technologies = [...new Set(certificates.map((c) => c.technology))]
+  const technologies = [...new Set(certificates.map((c) => c.technology))];
 
   return (
     <div className="min-h-screen bg-background">
@@ -146,7 +200,11 @@ export default function CertificatesPage() {
         <DashboardHeader />
 
         <div className="p-4 md:p-6 space-y-6">
-          <Button onClick={() => router.push("/dashboard")} variant="ghost" className="mb-2 hover:bg-muted">
+          <Button
+            onClick={() => router.push("/dashboard")}
+            variant="ghost"
+            className="mb-2 hover:bg-muted"
+          >
             <ArrowLeft className="w-4 h-4 mr-2" />
             {t("common.back")}
           </Button>
@@ -159,54 +217,65 @@ export default function CertificatesPage() {
           {/* Compact Stats */}
           {stats && !statsError && (
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-energy-green/10 border border-energy-green/20">
-                <Zap className="w-5 h-5 text-energy-green shrink-0" />
-                <div className="flex-1">
-                  <p className="text-lg font-bold text-energy-green">{stats.total_kwh_certified.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{t("certificates.stats.certified")}</p>
-                </div>
-                <InfoTooltip text={t("certificates.tooltip.certified")} />
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-solar-orange/10 border border-solar-orange/20">
-                <Flame className="w-5 h-5 text-solar-orange shrink-0" />
-                <div className="flex-1">
-                  <p className="text-lg font-bold text-solar-orange">{stats.total_kwh_retired.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{t("certificates.stats.retired")}</p>
-                </div>
-                <InfoTooltip text={t("certificates.tooltip.retired")} />
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-web3-purple/10 border border-web3-purple/20">
-                <Leaf className="w-5 h-5 text-web3-purple shrink-0" />
-                <div className="flex-1">
-                  <p className="text-lg font-bold text-web3-purple">{stats.co2_avoided_kg.toLocaleString()}</p>
-                  <p className="text-xs text-muted-foreground">{t("certificates.stats.co2")}</p>
-                </div>
-                <InfoTooltip text={t("certificates.tooltip.co2")} />
-              </div>
-              <div className="flex items-center gap-3 p-3 rounded-lg bg-solar-yellow/10 border border-solar-yellow/20">
-                <Award className="w-5 h-5 text-solar-yellow shrink-0" />
-                <div className="flex-1">
-                  <p className="text-lg font-bold text-solar-yellow">{stats.certificates_available}</p>
-                  <p className="text-xs text-muted-foreground">{t("certificates.stats.available")}</p>
-                </div>
-                <InfoTooltip text={t("certificates.tooltip.available")} />
-              </div>
-            </div>
-          )}
-          {statsLoading && (
-            <div className="flex items-center gap-2 text-muted-foreground py-4 justify-center">
-              <Spinner className="size-5" />
+              <CertificateStatCard
+                value={stats.total_kwh_certified.toLocaleString()}
+                label={t("certificates.stats.certified")}
+                tooltip={t("certificates.tooltip.certified")}
+                icon={<Zap className="w-5 h-5 text-energy-green" />}
+                containerClassName="bg-energy-green/10 border-energy-green/20"
+                valueClassName="text-energy-green"
+                interactive
+                isActive={statusFilter === "all"}
+                onClick={() => handleStatusQuickFilter("all")}
+              />
+
+              <CertificateStatCard
+                value={stats.total_kwh_retired.toLocaleString()}
+                label={t("certificates.stats.retired")}
+                tooltip={t("certificates.tooltip.retired")}
+                icon={<Flame className="w-5 h-5 text-solar-orange" />}
+                containerClassName="bg-solar-orange/10 border-solar-orange/20"
+                valueClassName="text-solar-orange"
+                interactive
+                isActive={statusFilter === "retired"}
+                onClick={() => handleStatusQuickFilter("retired")}
+              />
+
+              <CertificateStatCard
+                value={stats.co2_avoided_kg.toLocaleString()}
+                label={t("certificates.stats.co2")}
+                tooltip={t("certificates.tooltip.co2")}
+                icon={<Leaf className="w-5 h-5 text-web3-purple" />}
+                containerClassName="bg-web3-purple/10 border-web3-purple/20"
+                valueClassName="text-web3-purple"
+              />
+
+              <CertificateStatCard
+                value={stats.certificates_available}
+                label={t("certificates.stats.available")}
+                tooltip={t("certificates.tooltip.available")}
+                icon={<Award className="w-5 h-5 text-solar-yellow" />}
+                containerClassName="bg-solar-yellow/10 border-solar-yellow/20"
+                valueClassName="text-solar-yellow"
+                interactive
+                isActive={statusFilter === "available"}
+                onClick={() => handleStatusQuickFilter("available")}
+              />
             </div>
           )}
 
           {/* Filters */}
           <div className="flex flex-wrap gap-3">
             <Select value={techFilter} onValueChange={setTechFilter}>
-              <SelectTrigger className="w-[160px]">
-                <SelectValue placeholder={t("certificates.filter.technology")} />
+              <SelectTrigger className="w-40">
+                <SelectValue
+                  placeholder={t("certificates.filter.technology")}
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t("certificates.filter.all")}</SelectItem>
+                <SelectItem value="all">
+                  {t("certificates.filter.all")}
+                </SelectItem>
                 {technologies.map((tech) => (
                   <SelectItem key={tech} value={tech}>
                     {tech.charAt(0).toUpperCase() + tech.slice(1)}
@@ -215,15 +284,28 @@ export default function CertificatesPage() {
               </SelectContent>
             </Select>
 
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[160px]">
+            <Select
+              value={statusFilter}
+              onValueChange={(value) =>
+                setStatusFilter(value as CertificateStatusFilter)
+              }
+            >
+              <SelectTrigger className="w-40">
                 <SelectValue placeholder={t("certificates.filter.status")} />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="all">{t("certificates.filter.all")}</SelectItem>
-                <SelectItem value="pending">{t("certificates.status.pending")}</SelectItem>
-                <SelectItem value="available">{t("certificates.status.available")}</SelectItem>
-                <SelectItem value="retired">{t("certificates.status.retired")}</SelectItem>
+                <SelectItem value="all">
+                  {t("certificates.filter.all")}
+                </SelectItem>
+                <SelectItem value="pending">
+                  {t("certificates.status.pending")}
+                </SelectItem>
+                <SelectItem value="available">
+                  {t("certificates.status.available")}
+                </SelectItem>
+                <SelectItem value="retired">
+                  {t("certificates.status.retired")}
+                </SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -244,7 +326,9 @@ export default function CertificatesPage() {
             <Card>
               <CardContent className="py-12 text-center">
                 <Award className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-50" />
-                <p className="text-muted-foreground">{t("certificates.noData")}</p>
+                <p className="text-muted-foreground">
+                  {t("certificates.noData")}
+                </p>
               </CardContent>
             </Card>
           )}
@@ -267,8 +351,8 @@ export default function CertificatesPage() {
         isOpen={!!retireCert}
         onClose={() => setRetireCert(null)}
         certificate={retireCert}
-        onSuccess={refetch}
+        onSuccess={handleRetireSuccess}
       />
     </div>
-  )
+  );
 }
