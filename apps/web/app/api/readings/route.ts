@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server"
 import { supabase } from "@/lib/supabase"
-import { requireAuth, isSession } from "@/lib/auth/middleware"
+import { requireAuth, requireAdmin, isSession } from "@/lib/auth/middleware"
 import { validateBody } from "@/lib/validation/validate"
-import { createReadingSchema } from "@/lib/validation/schemas"
+import { createReadingSchema, updateReadingSchema } from "@/lib/validation/schemas"
 import { safeDbError, safeCatchError } from "@/lib/errors/safe-error"
 
 // GET: authenticated — scoped to caller's cooperatives
@@ -169,6 +169,44 @@ export async function POST(req: NextRequest) {
     if (insertError) return safeDbError(insertError)
 
     return NextResponse.json(reading, { status: 201 })
+  } catch (err) {
+    return safeCatchError(err)
+  }
+}
+
+// PATCH: admin — update reading status (verify/reject)
+export async function PATCH(req: NextRequest) {
+  try {
+    const body = await req.json()
+    const v = validateBody(updateReadingSchema, body)
+    if (!v.success) return v.response
+
+    // Get the reading to check cooperative_id
+    const { data: reading } = await supabase
+      .from("readings")
+      .select("cooperative_id")
+      .eq("id", v.data.reading_id)
+      .single()
+
+    if (!reading) {
+      return NextResponse.json({ error: "Reading not found" }, { status: 404 })
+    }
+
+    // Require admin of the cooperative
+    const session = await requireAdmin(reading.cooperative_id)
+    if (!isSession(session)) return session
+
+    // Update reading status
+    const { data: updated, error } = await supabase
+      .from("readings")
+      .update({ status: v.data.status })
+      .eq("id", v.data.reading_id)
+      .select()
+      .single()
+
+    if (error) return safeDbError(error)
+
+    return NextResponse.json(updated)
   } catch (err) {
     return safeCatchError(err)
   }

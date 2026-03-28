@@ -1,16 +1,18 @@
 "use client"
 
-import { useEffect } from "react"
+import { useEffect, useMemo } from "react"
 import { useRouter } from "next/navigation"
 import { useWallet } from "@/lib/wallet-context"
 import { useI18n } from "@/lib/i18n-context"
 import { useHorizonPayments } from "@/hooks/useHorizonPayments"
+import { useEvents } from "@/hooks/useEvents"
 import { Sidebar } from "@/components/sidebar"
 import { DashboardHeader } from "@/components/dashboard-header"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Loader2, AlertCircle } from "lucide-react"
+import { ArrowLeft, ArrowDownLeft, ArrowUpRight, Loader2, AlertCircle, ExternalLink, Flame, Coins } from "lucide-react"
 import Link from "next/link"
+import { STELLAR_CONFIG } from "@/lib/contracts-config"
 
 function formatDate(isoString: string): string {
   const date = new Date(isoString)
@@ -22,11 +24,71 @@ function formatTime(isoString: string): string {
   return date.toLocaleTimeString(undefined, { hour: "2-digit", minute: "2-digit" })
 }
 
+type ActivityItem = {
+  id: string
+  type: "payment" | "mint" | "burn"
+  created_at: string
+  tx_hash?: string
+  amount?: string
+  asset?: string
+  isIncoming?: boolean
+  description?: string
+}
+
 export default function ActivityPage() {
   const { isConnected, address } = useWallet()
   const { t } = useI18n()
   const router = useRouter()
-  const { payments, isLoading, error, refetch } = useHorizonPayments(address)
+  const { payments, isLoading: paymentsLoading, error: paymentsError, refetch: refetchPayments } = useHorizonPayments(address)
+  const { events, isLoading: eventsLoading, error: eventsError, refetch: refetchEvents } = useEvents(address)
+
+  const isLoading = paymentsLoading || eventsLoading
+  const error = paymentsError || eventsError
+
+  const refetch = () => {
+    refetchPayments()
+    refetchEvents()
+  }
+
+  const mergedActivity = useMemo(() => {
+    const items: ActivityItem[] = []
+
+    // Add Horizon payments
+    payments.forEach((payment) => {
+      const isIncoming = payment.to === address
+      const assetLabel =
+        payment.asset_type === "native"
+          ? "XLM"
+          : payment.asset_code ?? payment.asset_type
+
+      items.push({
+        id: payment.id,
+        type: "payment",
+        created_at: payment.created_at,
+        tx_hash: payment.transaction_hash,
+        amount: payment.amount ?? payment.source_amount,
+        asset: assetLabel,
+        isIncoming,
+        description: payment.type.replace(/_/g, " "),
+      })
+    })
+
+    // Add mint/burn events
+    events.forEach((event) => {
+      items.push({
+        id: event.id,
+        type: event.type,
+        created_at: event.created_at,
+        tx_hash: event.tx_hash,
+        amount: event.amount.toString(),
+        asset: "HDROP",
+        description: event.type === "mint" ? "Token Mint" : "Token Burn",
+      })
+    })
+
+    // Sort by date descending
+    return items.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+  }, [payments, events, address])
 
   useEffect(() => {
     if (!isConnected) {
@@ -114,44 +176,63 @@ export default function ActivityPage() {
                     {t("activity.retry")}
                   </Button>
                 </div>
-              ) : payments.length === 0 ? (
+              ) : mergedActivity.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">{t("activity.noTransactions")}</div>
               ) : (
                 <div className="space-y-3">
-                  {payments.slice(0, 10).map((payment) => {
-                    const isIncoming = payment.to === address
-                    const assetLabel =
-                      payment.asset_type === "native"
-                        ? "XLM"
-                        : payment.asset_code ?? payment.asset_type
+                  {mergedActivity.slice(0, 10).map((item) => {
+                    const networkType = STELLAR_CONFIG.NETWORK === "testnet" ? "testnet" : "public"
+                    const stellarExpertUrl = `https://stellar.expert/explorer/${networkType}/tx/${item.tx_hash}`
+
+                    let icon = <ArrowUpRight className="w-5 h-5 text-primary" />
+                    let color = "text-primary"
+                    let prefix = ""
+
+                    if (item.type === "mint") {
+                      icon = <Coins className="w-5 h-5 text-success" />
+                      color = "text-success"
+                      prefix = "+"
+                    } else if (item.type === "burn") {
+                      icon = <Flame className="w-5 h-5 text-destructive" />
+                      color = "text-destructive"
+                      prefix = "-"
+                    } else if (item.isIncoming) {
+                      icon = <ArrowDownLeft className="w-5 h-5 text-success" />
+                      color = "text-success"
+                      prefix = "+"
+                    } else {
+                      prefix = "-"
+                    }
 
                     return (
                       <div
-                        key={payment.id}
+                        key={item.id}
                         className="flex items-center gap-3 p-4 rounded-lg hover:bg-muted transition-colors border border-border"
                       >
-                        <div className="flex-shrink-0">
-                          {isIncoming ? (
-                            <ArrowDownLeft className="w-5 h-5 text-success" />
-                          ) : (
-                            <ArrowUpRight className="w-5 h-5 text-primary" />
-                          )}
-                        </div>
+                        <div className="flex-shrink-0">{icon}</div>
                         <div className="flex-1 min-w-0">
-                          <p className="font-medium text-sm md:text-base capitalize">
-                            {payment.type.replace(/_/g, " ")}
-                          </p>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium text-sm md:text-base capitalize">
+                              {item.description}
+                            </p>
+                            {item.tx_hash && (
+                              <a
+                                href={stellarExpertUrl}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-muted-foreground hover:text-primary transition-colors"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </a>
+                            )}
+                          </div>
                           <p className="text-xs md:text-sm text-muted-foreground">
-                            {formatDate(payment.created_at)} · {formatTime(payment.created_at)}
+                            {formatDate(item.created_at)} · {formatTime(item.created_at)}
                           </p>
                         </div>
-                        <div
-                          className={`flex-shrink-0 font-semibold text-sm md:text-base ${
-                            isIncoming ? "text-success" : "text-primary"
-                          }`}
-                        >
-                          {isIncoming ? "+" : "-"}
-                          {payment.amount ?? payment.source_amount ?? "–"} {assetLabel}
+                        <div className={`flex-shrink-0 font-semibold text-sm md:text-base ${color}`}>
+                          {prefix}
+                          {item.amount ?? "–"} {item.asset}
                         </div>
                       </div>
                     )

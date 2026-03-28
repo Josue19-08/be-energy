@@ -42,6 +42,25 @@ export async function POST(req: NextRequest) {
     const session = await requireAdmin(v.data.cooperative_id)
     if (!isSession(session)) return session
 
+    // Check for verified readings in the certificate period
+    const { data: verifiedReadings, error: readingsError } = await supabase
+      .from("readings")
+      .select("id")
+      .eq("cooperative_id", v.data.cooperative_id)
+      .eq("status", "verified")
+      .gte("reading_date", v.data.generation_period_start)
+      .lte("reading_date", v.data.generation_period_end)
+      .limit(1)
+
+    if (readingsError) return safeDbError(readingsError)
+
+    if (!verifiedReadings || verifiedReadings.length === 0) {
+      return NextResponse.json(
+        { error: "No verified readings for this period" },
+        { status: 400 }
+      )
+    }
+
     const { data, error } = await supabase
       .from("certificates")
       .insert({

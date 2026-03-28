@@ -328,6 +328,7 @@ const translations = {
     "createCert.location": "Ubicación (opcional)",
     "createCert.submit": "Crear Certificado",
     "createCert.success": "Certificado creado exitosamente",
+    "createCert.invalidDateRange": "La fecha de inicio debe ser anterior a la fecha de fin",
 
     // Retirar certificado
     "retire.title": "Retirar Certificado",
@@ -382,6 +383,21 @@ const translations = {
     "registerCoop.cta": "Registrá tu cooperativa para empezar",
     "registerCoop.ctaDesc": "Registra tu cooperativa energética para gestionar medidores, lecturas y certificados",
     "registerCoop.ctaButton": "Registrar Cooperativa",
+
+    // Onboarding Card
+    "onboarding.title": "¡Bienvenido a Be Energy!",
+    "onboarding.subtitle": "Completá estos pasos para empezar a certificar tu energía renovable.",
+    "onboarding.stepWallet": "Conectá tu wallet",
+    "onboarding.stepJoin": "Uníte a una cooperativa",
+    "onboarding.stepReadings": "Cargá lecturas",
+    "onboarding.createCoopTitle": "Crear cooperativa",
+    "onboarding.createCoopDesc": "Registrá tu propia cooperativa energética y comenzá a gestionar medidores y certificados.",
+    "onboarding.createCoopButton": "Crear cooperativa",
+    "onboarding.joinTitle": "Unirme a una cooperativa",
+    "onboarding.joinInstructions": "Compartí tu dirección Stellar con el administrador de la cooperativa para que te agreguen como miembro.",
+    "onboarding.joinFootnote": "Una vez agregado, actualizá la sesión para ver los cambios.",
+    "onboarding.copyAddress": "Copiar dirección",
+    "onboarding.copiedAddress": "¡Copiado!",
   },
   en: {
     // Landing Page
@@ -698,6 +714,7 @@ const translations = {
     "createCert.location": "Location (optional)",
     "createCert.submit": "Create Certificate",
     "createCert.success": "Certificate created successfully",
+    "createCert.invalidDateRange": "The start date must be before the end date",
 
     // Retire certificate
     "retire.title": "Retire Certificate",
@@ -752,6 +769,21 @@ const translations = {
     "registerCoop.cta": "Register your cooperative to get started",
     "registerCoop.ctaDesc": "Register your energy cooperative to manage meters, readings and certificates",
     "registerCoop.ctaButton": "Register Cooperative",
+
+    // Onboarding Card
+    "onboarding.title": "Welcome to Be Energy!",
+    "onboarding.subtitle": "Complete these steps to start certifying your renewable energy.",
+    "onboarding.stepWallet": "Connect wallet",
+    "onboarding.stepJoin": "Join a cooperative",
+    "onboarding.stepReadings": "Load readings",
+    "onboarding.createCoopTitle": "Create cooperative",
+    "onboarding.createCoopDesc": "Register your own energy cooperative and start managing meters and certificates.",
+    "onboarding.createCoopButton": "Create cooperative",
+    "onboarding.joinTitle": "Join a cooperative",
+    "onboarding.joinInstructions": "Share your Stellar address with the cooperative admin so they can add you as a member.",
+    "onboarding.joinFootnote": "Once added, refresh your session to see the changes.",
+    "onboarding.copyAddress": "Copy address",
+    "onboarding.copiedAddress": "Copied!",
   },
 }
 

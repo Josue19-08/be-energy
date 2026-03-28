@@ -1,39 +1,24 @@
 "use client";
+import { useEffect, useState } from "react"
+import { useRouter } from "next/navigation"
+import { useWallet } from "@/lib/wallet-context"
+import { useI18n } from "@/lib/i18n-context"
+import { useCertificateStats } from "@/hooks/useCertificateStats"
+import { useCertificates, type Certificate } from "@/hooks/useCertificates"
+import { Sidebar } from "@/components/sidebar"
+import { DashboardHeader } from "@/components/dashboard-header"
+import { Button } from "@/components/ui/button"
+import { Card, CardContent } from "@/components/ui/card"
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { ArrowLeft, Award, Zap, Flame, Leaf, ExternalLink, ChevronDown, ChevronUp, AlertCircle } from "lucide-react"
+import { InfoTooltip } from "@/components/shared/info-tooltip"
+import { Spinner } from "@/components/ui/spinner"
+import { useAuth } from "@/lib/auth-context"
+import { RetireCertificateModal } from "@/components/modals/retire-certificate-modal"
+import { getStellarExpertUrl } from "@/lib/utils"
+import { CertificateStatCard } from "@/components/certificates/certificate-stat-card"
 
-import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
-import { useWallet } from "@/lib/wallet-context";
-import { useI18n } from "@/lib/i18n-context";
-import { useCertificateStats } from "@/hooks/useCertificateStats";
-import { useCertificates, type Certificate } from "@/hooks/useCertificates";
-import { Sidebar } from "@/components/sidebar";
-import { DashboardHeader } from "@/components/dashboard-header";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  ArrowLeft,
-  Award,
-  Zap,
-  Flame,
-  Leaf,
-  ExternalLink,
-  ChevronDown,
-  ChevronUp,
-  AlertCircle,
-} from "lucide-react";
-import { Spinner } from "@/components/ui/spinner";
-import { useAuth } from "@/lib/auth-context";
-import { RetireCertificateModal } from "@/components/modals/retire-certificate-modal";
-import { CertificateStatCard } from "@/components/certificates/certificate-stat-card";
-
-type CertificateStatusFilter = "all" | "pending" | "available" | "retired";
+type CertificateStatusFilter = "all" | "pending" | "available" | "retired"
 
 function formatDate(isoString: string): string {
   return new Date(isoString).toLocaleDateString("es-ES", {
@@ -64,17 +49,8 @@ function StatusBadge({
   );
 }
 
-function CertificateCard({
-  cert,
-  t,
-  onRetire,
-}: {
-  cert: Certificate;
-  t: (key: string) => string;
-  onRetire?: (cert: Certificate) => void;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const stellarExpertBase = "https://stellar.expert/explorer/testnet/tx/";
+function CertificateCard({ cert, t, onRetire }: { cert: Certificate; t: (key: string) => string; onRetire?: (cert: Certificate) => void }) {
+  const [expanded, setExpanded] = useState(false)
 
   return (
     <Card className="border border-border">
@@ -115,7 +91,7 @@ function CertificateCard({
             )}
             {cert.mint_tx_hash && (
               <a
-                href={`${stellarExpertBase}${cert.mint_tx_hash}`}
+                href={getStellarExpertUrl(cert.mint_tx_hash)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-web3-purple hover:text-web3-purple/80 transition-colors"

@@ -105,7 +105,10 @@ export const createCertificateSchema = z.object({
   total_kwh: z.number().positive(),
   technology: z.string().min(1),
   location: z.string().max(200).nullish(),
-})
+}).refine(
+  (d) => d.generation_period_start <= d.generation_period_end,
+  { message: "generation_period_start must be before or equal to generation_period_end" }
+)
 
 // Mint
 export const mintSchema = z.object({
@@ -115,6 +118,12 @@ export const mintSchema = z.object({
   (d) => d.reading_id || d.certificate_id,
   { message: "reading_id or certificate_id required" }
 )
+
+// Update reading
+export const updateReadingSchema = z.object({
+  reading_id: uuid,
+  status: z.enum(["pending", "verified", "rejected"]),
+})
 
 // Retire
 export const retireSchema = z.object({

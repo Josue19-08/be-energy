@@ -15,7 +15,7 @@ import { Button } from "@/components/ui/button"
 import { Spinner } from "@/components/ui/spinner"
 import {
   Users, Zap, Award, Gauge, Building2, ShieldAlert, ChevronDown,
-  ArrowRight, Leaf, Activity, Circle, ExternalLink, Plus, BarChart3,
+  ArrowRight, Leaf, Activity, Circle, ExternalLink, Plus, BarChart3, AlertCircle,
 } from "lucide-react"
 import { CreateCertificateModal } from "@/components/modals/create-certificate-modal"
 import { AddMeterModal } from "@/components/modals/add-meter-modal"
@@ -39,6 +39,8 @@ export default function CooperativeAdminPage() {
   const [showCreateCert, setShowCreateCert] = useState(false)
   const [showAddMeter, setShowAddMeter] = useState(false)
   const [showSubmitReading, setShowSubmitReading] = useState(false)
+  const [mintingCertId, setMintingCertId] = useState<string | null>(null)
+  const [mintError, setMintError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!walletPending && !authLoading && !isConnected) router.push("/")
@@ -96,15 +98,24 @@ export default function CooperativeAdminPage() {
   const treesEquivalent = Math.round(co2Avoided / 21) // ~21 kg CO2 per tree per year
 
   const handleMint = async (certId: string) => {
+    setMintingCertId(certId)
+    setMintError(null)
     try {
       const res = await fetch("/api/mint", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ certificate_id: certId }),
       })
-      if (res.ok) refetch()
+      const data = await res.json()
+      if (!res.ok) {
+        setMintError(data.error || "Mint failed")
+        return
+      }
+      refetch()
     } catch (err) {
-      console.error("Mint failed:", err)
+      setMintError(err instanceof Error ? err.message : "Network error")
+    } finally {
+      setMintingCertId(null)
     }
   }
 
@@ -350,11 +361,30 @@ export default function CooperativeAdminPage() {
                                   {cert.technology} · {new Date(cert.generation_period_start).toLocaleDateString()} – {new Date(cert.generation_period_end).toLocaleDateString()}
                                 </p>
                               </div>
-                              <Button size="sm" onClick={() => handleMint(cert.id)} className="bg-solar-yellow text-foreground hover:bg-solar-yellow/90">
-                                {t("coopAdmin.mint")}
+                              <Button
+                                size="sm"
+                                onClick={() => handleMint(cert.id)}
+                                disabled={mintingCertId !== null}
+                                className="bg-solar-yellow text-foreground hover:bg-solar-yellow/90"
+                              >
+                                {mintingCertId === cert.id ? (
+                                  <span className="flex items-center gap-2">
+                                    <span className="w-4 h-4 border-2 border-foreground/30 border-t-foreground rounded-full animate-spin" />
+                                    Minting...
+                                  </span>
+                                ) : (
+                                  t("coopAdmin.mint")
+                                )}
                               </Button>
                             </div>
                           ))}
+                      </div>
+                    )}
+
+                    {mintError && (
+                      <div className="mt-3 border border-red-500/30 rounded-lg p-3 bg-red-500/10 flex items-center gap-2">
+                        <AlertCircle className="w-4 h-4 text-red-500 shrink-0" />
+                        <p className="text-sm text-red-500">{mintError}</p>
                       </div>
                     )}
 
